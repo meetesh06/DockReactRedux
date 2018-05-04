@@ -18,6 +18,8 @@ import AccessTimeIcon from '@material-ui/icons/AccessTime';
 import DateRangeIcon from '@material-ui/icons/DateRange';
 import KeyboardIcon from '@material-ui/icons/Keyboard';
 
+import Checkbox from 'material-ui/Checkbox';
+import { FormControlLabel } from 'material-ui/Form';
 
 const styles = theme => ({
   root: {
@@ -54,7 +56,9 @@ class CreateEvent extends React.Component {
     eventName: '',
     eventDescription: '',
     eventStartDate: new Date(),
-    eventEndDate: new Date()
+    eventEndDate: new Date(),
+    checked: [],
+    expanded: []
   };
   handleChange = name => event => {
     this.setState({
@@ -125,6 +129,16 @@ class CreateEvent extends React.Component {
           </Grid>
           
         </Grid>
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={this.state.checkedA}
+              onChange={this.handleChange('checkedA')}
+              value="checkedA"
+            />
+          }
+          label="Secondary"
+        />
       </div>;
     case 1:
       return <Typography>{this.state.eventName}</Typography>;
