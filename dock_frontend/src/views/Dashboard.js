@@ -55,7 +55,7 @@ class Dashboard extends React.Component {
 
 Dashboard.propTypes = {
   classes: PropTypes.object.isRequired,
-  selected: PropTypes.bool.isRequired,
+  selected: PropTypes.number.isRequired,
   update: PropTypes.func.isRequired
 };
 const mapStateToProps = (state) => {

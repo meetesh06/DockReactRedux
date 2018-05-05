@@ -5,6 +5,7 @@ import Login from '../components/Login';
 import Dashboard from '../views/Dashboard';
 import Events from '../views/Events';
 import Bulletins from '../views/Bulletins';
+import Chats from '../views/Chats';
 
 const notFound = () => <h1>This is 404</h1>;
 
@@ -15,6 +16,7 @@ const Routes = () => {
       <Route exact path="/login" component={Login} />
       <Route path="/events" component={RequireAuth(Events)} />
       <Route path="/bulletins" component={RequireAuth(Bulletins)} />
+      <Route path="/chats" component={RequireAuth(Chats)} />
       <Route exact path="*" component={RequireAuth(notFound)} />
     </Switch>
   );

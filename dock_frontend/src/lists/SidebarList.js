@@ -42,7 +42,7 @@ class SidebarList extends React.Component {
           <ListItemText primary={<Typography type="body2" style={{ color: '#FFFFFF' }}>Notifications</Typography>} />
         </ListItem>
         <Divider />
-        <ListItem component={Link} style={{backgroundColor: selected === '5' && '#FF5252' }} to="/chats" button>
+        <ListItem component={Link} style={{backgroundColor: selected === 4 && '#FF5252' }} to="/chats" button>
           <ListItemIcon style={{ color: '#FFFFFF' }}>
             <ChatIcon />
           </ListItemIcon>

@@ -18,9 +18,6 @@ import AccessTimeIcon from '@material-ui/icons/AccessTime';
 import DateRangeIcon from '@material-ui/icons/DateRange';
 import KeyboardIcon from '@material-ui/icons/Keyboard';
 
-import Checkbox from 'material-ui/Checkbox';
-import { FormControlLabel } from 'material-ui/Form';
-
 const styles = theme => ({
   root: {
     width: '90%'
@@ -44,7 +41,7 @@ const styles = theme => ({
 });
 
 function getSteps() {
-  return ['Basic Event Details', 'Customize your event', 'Create an Event'];
+  return ['Basic Event Details', 'Customize your event', 'Select your audience', 'Payment and contact details'];
 }
 
 
@@ -77,13 +74,17 @@ class CreateEvent extends React.Component {
       return <div> 
         <FormControl fullWidth className={this.props.classes.formControl}>
           <TextField
+            required
             id="event_name"
             label="Title"
             margin="normal"
+            error={true}
             value={this.state.eventName}
+            inputProps={{maxLength: 25, minLength: 3}}
             onChange={this.handleChange('eventName')}
           />
           <TextField
+            required
             id="event_description"
             label="Description"
             multiline
@@ -105,7 +106,7 @@ class CreateEvent extends React.Component {
                 timeIcon={<AccessTimeIcon/>}
                 dateRangeIcon={<DateRangeIcon/>}
                 keyboardIcon={<KeyboardIcon/>}
-                value={this.state.selectedDate}
+                value={this.state.eventStartDate}
                 onChange={this.handleStartDateChange}
                 label="Event Start"
               />
@@ -121,40 +122,52 @@ class CreateEvent extends React.Component {
                 timeIcon={<AccessTimeIcon/>}
                 dateRangeIcon={<DateRangeIcon/>}
                 keyboardIcon={<KeyboardIcon/>}
-                value={this.state.selectedDate}
-                onChange={this.handleStartDateChange}
-                label="Event Start"
+                value={this.state.eventEndDate}
+                onChange={this.handleEndDateChange}
+                label="Event End"
               />
             </MuiPickersUtilsProvider>
-          </Grid>
-          
+          </Grid>          
         </Grid>
-        <FormControlLabel
-          control={
-            <Checkbox
-              checked={this.state.checkedA}
-              onChange={this.handleChange('checkedA')}
-              value="checkedA"
-            />
-          }
-          label="Secondary"
-        />
       </div>;
     case 1:
-      return <Typography>{this.state.eventName}</Typography>;
+      return <div>
+        Customize event such as poster and other things
+
+      </div>;
     case 2:
       return `Try out different ad text to see what brings in the most customers,
                 and learn how to enhance your ads using features like ad extensions.
                 If you run into any problems with your ads, find out how to tell if
                 they're running and how to resolve approval issues.`;
+    case 3:
+      return 'Payment and contact details';
     default:
       return 'Unknown step';
     }
   }
+
+  stepFulfulled = (current) => {
+    console.log(current);
+    switch(current) {
+    case 0:
+      console.log(this.state.eventName.length);
+      if ( (this.state.eventName.length > 3 && this.state.eventName.length < 25 ) 
+          && ( this.state.eventDescription.length > 3 && this.state.eventDescription.length < 140 ) && ( this.state.eventStartDate <= this.state.eventStartDate ) ) {
+        return true;
+      }
+      return false;
+    default:
+      return false;
+    }
+  }
+
   handleNext = () => {
-    this.setState({
-      activeStep: this.state.activeStep + 1,
-    });
+    if(this.stepFulfulled(this.state.activeStep)) {
+      this.setState({
+        activeStep: this.state.activeStep + 1,
+      });
+    }
   };
 
   handleBack = () => {
@@ -169,8 +182,19 @@ class CreateEvent extends React.Component {
     });
   };
 
-  handleDateChange = (date) => {
-    this.setState({ selectedDate: date });
+  handleStartDateChange = (date) => {
+    this.setState({ eventStartDate: date });
+    if (!(this.state.eventEndDate >= date)) {
+      this.setState({ eventEndDate: date });
+    }
+  }
+  
+  handleEndDateChange = (date) => {
+    if (date >= this.state.eventStartDate){
+      this.setState({ eventEndDate: date });
+    } else {
+      this.setState({ eventEndDate: this.state.eventStartDate });
+    }
   }
 
   render() {
