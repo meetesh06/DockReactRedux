@@ -17,10 +17,80 @@ import KeyboardArrowRightIcon from '@material-ui/icons/KeyboardArrowRight';
 import AccessTimeIcon from '@material-ui/icons/AccessTime';
 import DateRangeIcon from '@material-ui/icons/DateRange';
 import KeyboardIcon from '@material-ui/icons/Keyboard';
+import Dropzone from 'react-dropzone';
+
+import Card, { CardActions } from 'material-ui/Card';
+import Checkbox from 'material-ui/Checkbox';
+
+import DeleteIcon from '@material-ui/icons/Delete';
+import { FormControlLabel } from 'material-ui/Form';
+import AddAPhotoIcon from '@material-ui/icons/AddAPhoto';
+
+import IconButton from 'material-ui/IconButton';
+
+import Tree from '../components/Tree';
+
+const data = [
+  {
+    'label': 'FET',
+    'children': [
+      {
+        'label': 'FET-CSE',
+        'children': [
+          {
+            'label': 'FET-CSE-SEM4',
+            'children': [
+              {
+                'label': '4CSA'
+              },
+              {
+                'label': '4CSB'
+              },
+              {
+                'label': '4CSC'
+              }
+            ]
+          },
+          {
+            'label': 'FET-CSE-SEM6',
+            'children': [
+              {
+                'label': '6BAO'
+              }
+            ]
+          },
+        ]
+      },
+      {
+        'label': 'FET-ECE',
+        'children': [
+          {
+            'label': 'FET-ECE-SEM4'
+          },
+          {
+            'label': 'FET-ECE-SEM6'
+          }
+        ]
+      },
+      {
+        'label': 'FET-CIVIL',
+        'children': [
+          {
+            'label': 'FET-CIVIL-SEM4'
+          },
+          {
+            'label': 'FET-CIVIL-SEM6'
+          }
+        ]
+      },
+      
+    ]
+  }
+];
 
 const styles = theme => ({
   root: {
-    width: '90%'
+    width: '100%'
   },
   button: {
     marginTop: theme.spacing.unit,
@@ -37,16 +107,35 @@ const styles = theme => ({
   },
   pickers: {
     marginBottom: theme.spacing.unit*5
+  },
+  imagePreview: {
+    width: 100+'%',
+    height: 150,
+    objectFit: 'cover'
+  },
+  dropSpace: {
+    marginTop: theme.spacing.unit,
+    marginBottom: theme.spacing.unit,
+    padding: theme.spacing.unit
+  },
+  cover: {
+    width: 151,
+    height: 151,
+  },
+  checked: {
+    color: '#00BCD4'
   }
 });
 
 function getSteps() {
-  return ['Basic Event Details', 'Customize your event', 'Select your audience', 'Payment and contact details'];
+  return ['Basic Event Details', 'Customize your event', 'Select your audience', 'Payment and other details'];
 }
 
-
-
 class CreateEvent extends React.Component {
+  constructor(props) {
+    super(props);
+    this.saveTreeState = this.saveTreeState.bind(this);
+  }
   state = {
     activeStep: 0,
     multiline: 'Controlled',
@@ -55,10 +144,39 @@ class CreateEvent extends React.Component {
     eventStartDate: new Date(),
     eventEndDate: new Date(),
     checked: [],
-    expanded: []
+    expanded: [],
+    eventNameErr: false,
+    eventDescErr: false,
+    eventDateErr: false,
+    imageFiles: [],
+    audience: [],
+    audienceToSend: [],
+    dataAudience: data.slice(0)
   };
   handleChange = name => event => {
+    var eventNameErr;
+    if ( !(this.state.eventName.length > 3 && this.state.eventName.length < 25 ) ) {
+      eventNameErr = true;
+    } else {
+      eventNameErr = false;
+    }
+    var eventDescErr;
+    if (!( this.state.eventDescription.length > 3 && this.state.eventDescription.length <= 800 )) {
+      eventDescErr = true;
+    } else {
+      eventDescErr = false;
+    }
+    var eventDateErr;
+    if (!( this.state.eventStartDate <= this.state.eventEndDate )) {
+      eventDateErr = false;
+    } else {
+      eventDateErr = true;
+    }
+
     this.setState({
+      eventNameErr,
+      eventDescErr,
+      eventDateErr,
       [name]: event.target.value,
     });
   }
@@ -68,7 +186,77 @@ class CreateEvent extends React.Component {
   handleEndDateChange = (date) => {
     this.setState({ eventEndDate: date });
   }
+
+  onDrop(imageFiles) {
+    this.setState({
+      imageFiles: imageFiles
+    });
+  } 
+
+  setPoster(number) {
+    const a = this.state.imageFiles;
+    if (!a[number].poster) {
+      a[number].poster =  true;
+    } else {
+      a[number].poster = !a[number].poster;
+    }
+    this.setState({imageFiles: a});
+  }
+
+  removeImage(number) {
+    const a = this.state.imageFiles;
+    a.splice(number, 1);
+    this.setState({
+      imageFiles: a
+    });
+  }
+
+  saveTreeState(deselectedNodes, selectedNodes) {
+    var dataAudience = this.state.dataAudience;
+    deselectedNodes.map((node) => {
+      var path = node._id.split('-');
+      var i;
+      var last = dataAudience[path[0]];
+      for(i=1;i<path.length;i++) {
+        last = last.children[path[i]];
+      }
+      last['checked'] = false;
+    });
+    selectedNodes.map((node) => {
+      var path = node._id.split('-');
+      var i;
+      var last = dataAudience[path[0]];
+      for(i=1;i<path.length;i++) {
+        last = last.children[path[i]];
+      }
+      last['checked'] = true;
+    });
+    this.setState({dataAudience});
+  }
+
+  // onTreeChange(currentNode, selectedNodes) {
+  //   const dataAudience = this.state.dataAudience;
+  //   const audience = [];
+  //   var path = currentNode._id.split('-');
+  //   var i;
+  //   var last = dataAudience[path[0]];
+  //   for(i=1;i<path.length;i++) {
+  //     last = last.children[path[i]];
+  //   }
+  //   last['checked'] = currentNode.checked ? true : false;
+
+  //   selectedNodes.map((node) => {
+  //     audience.push(node.label);
+  //   });
+
+  //   console.log(dataAudience, audience);
+  //   this.setState({dataAudience, audience});
+    
+  // }
+  
+
   getStepContent(step) {
+    const { classes } = this.props; 
     switch (step) {
     case 0:
       return <div> 
@@ -78,9 +266,9 @@ class CreateEvent extends React.Component {
             id="event_name"
             label="Title"
             margin="normal"
-            error={true}
+            error={this.state.eventNameErr}
             value={this.state.eventName}
-            inputProps={{maxLength: 25, minLength: 3}}
+            inputProps={{maxLength: 24, minLength: 3}}
             onChange={this.handleChange('eventName')}
           />
           <TextField
@@ -88,6 +276,8 @@ class CreateEvent extends React.Component {
             id="event_description"
             label="Description"
             multiline
+            error={this.state.eventDescErr}
+            inputProps={{maxLength: 800, minLength: 4}}
             rows="3"
             rowsMax="10"
             value={this.state.eventDescription}
@@ -132,14 +322,138 @@ class CreateEvent extends React.Component {
       </div>;
     case 1:
       return <div>
-        Customize event such as poster and other things
+        <Typography variant="headline" gutterBottom>Select Your Poster</Typography>
+        <Dropzone
+          onDrop={this.onDrop.bind(this)} //<= Here
+          className='dropzone'
+          activeClassName='active-dropzone'
+          multiple={true}>
+          <div className={classes.dropSpace}>
+            <Button size="small" color="secondary">
+              Upload Image or drag them here
+            </Button>
+          </div>
+        </Dropzone>
+        <Grid container spacing={24} alignItems='center'>
+          {this.state.imageFiles.length > 0 && this.state.imageFiles.map((file, number) =>{ 
+            return (
+              <Grid key={number} item xs={12} md={3} sm={4}>
+                <Card className={classes.card}>
+                  <img className={this.props.classes.imagePreview} alt='' src={file.preview} />
+                  <CardActions>
+                    <FormControlLabel
+                      style={{flex: 1}}
+                      control={
+                        <Checkbox onClick={()=>this.setPoster(number)} icon={<AddAPhotoIcon />} checkedIcon={<AddAPhotoIcon />} color='primary' checked={ file.poster? true : false } />
+                      }
+                      label="Use as Cover"
+                    />
+                    <IconButton onClick={()=>this.removeImage(number)} aria-label="Delete" color="default">
+                      <DeleteIcon />
+                    </IconButton>
+                  </CardActions>
+                </Card>
+              </Grid>
+            );
+          } )}
+          
+        </Grid>
+        <Grid style={{marginTop: 20}} container spacing={24} alignItems='center'>
+          <Grid item xs={12} md={3} sm={4}>
+            <Typography>How many people in a team ? Students will be able to make teams and participate</Typography>
+          </Grid>
+          <Grid item xs={12} md={3} sm={4}>
+            <TextField
+              required
+              id="event_team_size"
+              label="Team Size"
+              margin="normal"
+              defaultValue="1"
+              value={this.state.eventTeamSize}
+              inputProps={{min: 1}}
+              type="number"
+              onChange={this.handleChange('eventName')}
+            />
+          </Grid>
+          <Grid item xs={12} md={6} sm={4}> </Grid>
 
+          <Grid item xs={12} md={12} sm={12}>
+            <Typography variant="headline">Contact Details</Typography>
+          </Grid>
+          <Grid item xs={12} md={3} sm={4}>
+            <TextField
+              fullWidth
+              label="Coordinator 1 Name"
+              margin="normal"
+            />
+            <TextField
+              fullWidth
+              label="email/phone"
+              margin="normal"
+            />
+            <TextField
+              fullWidth
+              required
+              label="Other details"
+              multiline
+              inputProps={{maxLength: 140, minLength: 4}}
+              rows="3"
+              margin="normal"
+            />
+          </Grid>
+          <Grid item xs={12} md={3} sm={4}>
+            <TextField
+              fullWidth
+              style={{marginLeft: 5, marginRight: 5 }}
+              label="Coordinator 2 Name"
+              margin="normal"
+            />
+            <TextField
+              fullWidth
+              style={{marginLeft: 5, marginRight: 5 }}
+              label="email/phone"
+              margin="normal"
+            />
+            <TextField
+              fullWidth
+              style={{marginLeft: 5, marginRight: 5 }}
+              required
+              label="Other details"
+              multiline
+              inputProps={{maxLength: 140, minLength: 4}}
+              rows="3"
+              margin="normal"
+            />
+          </Grid>
+          <Grid item xs={12} md={3} sm={4}>
+            <TextField
+              fullWidth
+              style={{marginLeft: 5, marginRight: 5 }}
+              label="Coordinator 3 Name"
+              margin="normal"
+            />
+            <TextField
+              fullWidth
+              style={{marginLeft: 5, marginRight: 5 }}
+              label="email/phone"
+              margin="normal"
+            />
+            <TextField
+              fullWidth
+              style={{marginLeft: 5, marginRight: 5 }}
+              required
+              label="Other details"
+              multiline
+              inputProps={{maxLength: 140, minLength: 4}}
+              rows="3"
+              margin="normal"
+            />
+          </Grid>
+          
+        </Grid>
       </div>;
     case 2:
-      return `Try out different ad text to see what brings in the most customers,
-                and learn how to enhance your ads using features like ad extensions.
-                If you run into any problems with your ads, find out how to tell if
-                they're running and how to resolve approval issues.`;
+      return <div style={{height:200}}><Tree saveTreeState={this.saveTreeState}  dataAudience={this.state.dataAudience}/></div> ;
     case 3:
       return 'Payment and contact details';
     default:
@@ -148,12 +462,15 @@ class CreateEvent extends React.Component {
   }
 
   stepFulfulled = (current) => {
-    console.log(current);
     switch(current) {
     case 0:
-      console.log(this.state.eventName.length);
       if ( (this.state.eventName.length > 3 && this.state.eventName.length < 25 ) 
-          && ( this.state.eventDescription.length > 3 && this.state.eventDescription.length < 140 ) && ( this.state.eventStartDate <= this.state.eventStartDate ) ) {
+          && ( this.state.eventDescription.length > 3 && this.state.eventDescription.length <= 800 ) && ( this.state.eventStartDate <= this.state.eventEndDate ) ) {
+        return true;
+      }
+      return false;
+    case 1:
+      if(this.state.imageFiles.length > 0) {
         return true;
       }
       return false;
