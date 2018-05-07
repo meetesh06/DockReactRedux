@@ -3,9 +3,11 @@ import api from './api';
 import config from './config';
 
 const server = express();
-server.use(express.static('./dock_frontend/build'));
+server.set('view engine', 'ejs');
+server.use(express.static('public'));
+
 server.get('/', (req,res) => {
-  res.sendFile('./dock_frontend/build/index.html');
+  res.render('index');
 });
 server.use('/api', api);
 server.listen(config.port, config.host, () => console.log('API Server is live on '+config.getHost()));
