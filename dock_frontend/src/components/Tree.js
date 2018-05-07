@@ -1,7 +1,9 @@
 import React from 'react';
 import DropdownTreeSelect from 'react-dropdown-tree-select';
 import 'react-dropdown-tree-select/dist/styles.css';
-import '../css/CreateEvent.css';
+import '../css/Tree.css';
+import PropTypes from 'prop-types';
+
 var selectedNodesGlobal = [];
 var deselectedNodes = [];
 class Tree extends React.Component {
@@ -25,5 +27,9 @@ class Tree extends React.Component {
     );
   }
 }
+
+Tree.propTypes = {
+  saveTreeState: PropTypes.func.isRequired
+};
 
 export default Tree;

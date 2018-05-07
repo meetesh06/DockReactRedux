@@ -1,13 +1,29 @@
-.mdl-demo .dropdown-trigger > span:after {
-  font-size: 12px;
-  color: #555;
-}
-.dropdown-trigger {
-  border-radius: 6px;
+.ql-toolbar {
+  background-color: #eeeeee;
 }
 
-.dropdown-content {
-  height: 200px;
-  min-width: 250px;
+.ql-toolbar.ql-snow {
+  border: none;
+  border-top-right-radius: 6px;
+  border-top-left-radius: 6px;
+}
+.ql-container {
+  background-color: #fafafa;
+  font-size: 15px;
+  min-height: 150px;
+  max-height: 300px;
   overflow: scroll;
+}
+.ql-container.ql-snow {
+  border: none;
+  border-bottom-right-radius: 6px;
+  border-bottom-left-radius: 6px; 
+}
+
+.card-actions {
+  opacity: 0.8;
+}
+
+.card-actions:hover {
+  opacity: 1;
 }

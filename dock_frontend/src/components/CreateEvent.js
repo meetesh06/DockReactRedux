@@ -5,7 +5,6 @@ import Stepper, { Step, StepLabel, StepContent } from 'material-ui/Stepper';
 import Button from 'material-ui/Button';
 import Paper from 'material-ui/Paper';
 import Typography from 'material-ui/Typography';
-import { FormControl } from 'material-ui/Form';
 import TextField from 'material-ui/TextField';
 import Grid from 'material-ui/Grid';
 import DateTimePicker from 'material-ui-pickers/DateTimePicker';
@@ -19,16 +18,24 @@ import DateRangeIcon from '@material-ui/icons/DateRange';
 import KeyboardIcon from '@material-ui/icons/Keyboard';
 import Dropzone from 'react-dropzone';
 
-import Card, { CardActions } from 'material-ui/Card';
+import Card from 'material-ui/Card';
 import Checkbox from 'material-ui/Checkbox';
 
 import DeleteIcon from '@material-ui/icons/Delete';
-import { FormControlLabel } from 'material-ui/Form';
-import AddAPhotoIcon from '@material-ui/icons/AddAPhoto';
+import StarBorderIcon from '@material-ui/icons/StarBorder';
+import StarIcon from '@material-ui/icons/Star';
 
 import IconButton from 'material-ui/IconButton';
 
 import Tree from '../components/Tree';
+
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css'; 
+import '../css/CreateEvent.css';
+import Chip from 'material-ui/Chip';
+import Input, { InputLabel, InputAdornment } from 'material-ui/Input';
+
+import SendIcon from '@material-ui/icons/Send';
 
 const data = [
   {
@@ -90,40 +97,47 @@ const data = [
 
 const styles = theme => ({
   root: {
-    width: '100%'
+    flex: 1
   },
   button: {
     marginTop: theme.spacing.unit,
     marginRight: theme.spacing.unit
   },
-  actionsContainer: {
-    marginBottom: theme.spacing.unit * 2
+  myHolder: {
+    padding: 5,
+    margin: 5
   },
-  resetContainer: {
-    padding: theme.spacing.unit * 3
+  customHelper: {
+    color: 'rgba(0, 0, 0, 0.54)',
+    margin: '0',
+    fontSize: '0.75rem',
+    textAlign: 'left',
+    marginTop: '8px',
+    minHeight: '1em',
+    fontFamily: '"Roboto", "Helvetica", "Arial","sans-serif" ',
+    lineHeight: '1em',
+    display: 'block',
+    marginBefore: '1em',
+    marginAfter: '1em',
+    marginStart: '0px',
+    marginEnd: '0px',
   },
-  formControl: {
-    marginBottom: theme.spacing.unit*5
-  },
-  pickers: {
-    marginBottom: theme.spacing.unit*5
-  },
-  imagePreview: {
+  media: {
     width: 100+'%',
     height: 150,
     objectFit: 'cover'
   },
-  dropSpace: {
-    marginTop: theme.spacing.unit,
-    marginBottom: theme.spacing.unit,
-    padding: theme.spacing.unit
+  card: {
+    height: 'auto',
+    margin: 5
   },
-  cover: {
-    width: 151,
-    height: 151,
+  image_btn: {
+    marginLeft: 10,
+    marginRight: 10,
+    marginBottom: 5
   },
-  checked: {
-    color: '#00BCD4'
+  chip: {
+
   }
 });
 
@@ -135,64 +149,93 @@ class CreateEvent extends React.Component {
   constructor(props) {
     super(props);
     this.saveTreeState = this.saveTreeState.bind(this);
+    this.handleChangeDescription = this.handleChangeDescription.bind(this);
+    this.addChip = this.addChip.bind(this);
   }
   state = {
     activeStep: 0,
     multiline: 'Controlled',
-    eventName: '',
-    eventDescription: '',
-    eventStartDate: new Date(),
-    eventEndDate: new Date(),
     checked: [],
     expanded: [],
-    eventNameErr: false,
-    eventDescErr: false,
-    eventDateErr: false,
     imageFiles: [],
     audience: [],
     audienceToSend: [],
-    dataAudience: data.slice(0)
+    dataAudience: data.slice(0),
+    draft: { name: '', description: '', start: new Date(), end: new Date(), team: 1, tags: [], tagTemp: ''}
   };
+  componentWillUnmount() {
+    console.log(this.state.draft);
+  }
   handleChange = name => event => {
-    var eventNameErr;
-    if ( !(this.state.eventName.length > 3 && this.state.eventName.length < 25 ) ) {
-      eventNameErr = true;
-    } else {
-      eventNameErr = false;
-    }
-    var eventDescErr;
-    if (!( this.state.eventDescription.length > 3 && this.state.eventDescription.length <= 800 )) {
-      eventDescErr = true;
-    } else {
-      eventDescErr = false;
-    }
-    var eventDateErr;
-    if (!( this.state.eventStartDate <= this.state.eventEndDate )) {
-      eventDateErr = false;
-    } else {
-      eventDateErr = true;
-    }
-
     this.setState({
-      eventNameErr,
-      eventDescErr,
-      eventDateErr,
-      [name]: event.target.value,
+      draft: { ...this.state.draft, [name]: event.target.value }
     });
+  }
+  handleChangeDescription(value) {
+    if(value.length <= 800 ) {
+      this.setState({
+        draft: { ...this.state.draft, description: value}
+      });
+    } else {
+      this.setState({
+        draft: { ...this.state.draft, description: this.state.draft.description}
+      });
+    }
   }
   handleStartDateChange = (date) => {
-    this.setState({ eventStartDate: date });
+    if (!((this.state.draft.end - date) >= 0)) {
+      this.setState({ draft: { ...this.state.draft, end: date, start: date} });
+    } else {
+      this.setState({ draft: { ...this.state.draft, start: date} });
+    }
   }
   handleEndDateChange = (date) => {
-    this.setState({ eventEndDate: date });
+    if (date >= this.state.draft.start){
+      this.setState({ draft: { ...this.state.draft, end: date} });
+    } else {
+      this.setState({ draft: { ...this.state.draft, end: this.state.draft.start} });
+    }
   }
+  stepFulfulled = (current) => {
+    switch(current) {
+    case 0:
+      if ( (this.state.draft.name.length >= 4 && this.state.draft.name.length <= 60) 
+          && (this.state.draft.description.length >= 15 && this.state.draft.description.length <= 800) 
+          && ( this.state.draft.start <= this.state.draft.end ) ) {
+        return true;
+      }
+      break;
+    case 1:
+      if(this.state.imageFiles.length > 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+  handleNext = () => {
+    if(this.stepFulfulled(this.state.activeStep)) {
+      this.setState({
+        activeStep: this.state.activeStep + 1,
+      });
+    }
+  };
 
-  onDrop(imageFiles) {
+  onDrop(acceptedFiles, rejectedFiles) {
+    var toAdd = [...this.state.imageFiles];
+    var current = acceptedFiles.length;
+    var i;
+    for(i=1;i<=current;i++) {
+      if(toAdd.length >= 4) {
+        console.log('image buffer full');
+      } else {
+        toAdd.push(acceptedFiles[i-1]);
+      }
+    }
     this.setState({
-      imageFiles: imageFiles
+      imageFiles: toAdd
     });
-  } 
-
+  }
+  
   setPoster(number) {
     const a = this.state.imageFiles;
     if (!a[number].poster) {
@@ -202,15 +245,15 @@ class CreateEvent extends React.Component {
     }
     this.setState({imageFiles: a});
   }
-
   removeImage(number) {
     const a = this.state.imageFiles;
     a.splice(number, 1);
+    console.log('removed a file', a);
     this.setState({
       imageFiles: a
     });
   }
-
+  // inefficient code
   saveTreeState(deselectedNodes, selectedNodes) {
     var dataAudience = this.state.dataAudience;
     deselectedNodes.map((node) => {
@@ -221,6 +264,7 @@ class CreateEvent extends React.Component {
         last = last.children[path[i]];
       }
       last['checked'] = false;
+      return true;
     });
     selectedNodes.map((node) => {
       var path = node._id.split('-');
@@ -230,226 +274,162 @@ class CreateEvent extends React.Component {
         last = last.children[path[i]];
       }
       last['checked'] = true;
+      return true;
     });
     this.setState({dataAudience});
   }
 
-  // onTreeChange(currentNode, selectedNodes) {
-  //   const dataAudience = this.state.dataAudience;
-  //   const audience = [];
-  //   var path = currentNode._id.split('-');
-  //   var i;
-  //   var last = dataAudience[path[0]];
-  //   for(i=1;i<path.length;i++) {
-  //     last = last.children[path[i]];
-  //   }
-  //   last['checked'] = currentNode.checked ? true : false;
-
-  //   selectedNodes.map((node) => {
-  //     audience.push(node.label);
-  //   });
-
-  //   console.log(dataAudience, audience);
-  //   this.setState({dataAudience, audience});
-    
-  // }
-  
-
+  addChip() {
+    if(this.state.draft.tagTemp.length > 3) {
+      this.setState({
+        draft: { ...this.state.draft, tagTemp: '', tags: [ ...this.state.draft.tags, this.state.draft.tagTemp ] },
+      });
+    }
+  }
+  removeChip = (number) => {
+    const newArr = this.state.draft.tags;
+    newArr.splice(number,1);
+    this.setState({
+      draft: { ...this.state.draft, tags: newArr }
+    });
+  }
   getStepContent(step) {
     const { classes } = this.props; 
+    const descriptionErr = !((this.state.draft.description.length == 0) || (this.state.draft.description.match(/(<.{1,3}>)(.{0}|<br>)(<\/.{1,3}>)/))) && (this.state.draft.description.length >= 800 || this.state.draft.description.length <= 15);
     switch (step) {
     case 0:
       return <div> 
-        <FormControl fullWidth className={this.props.classes.formControl}>
-          <TextField
-            required
-            id="event_name"
-            label="Title"
-            margin="normal"
-            error={this.state.eventNameErr}
-            value={this.state.eventName}
-            inputProps={{maxLength: 24, minLength: 3}}
-            onChange={this.handleChange('eventName')}
-          />
-          <TextField
-            required
-            id="event_description"
-            label="Description"
-            multiline
-            error={this.state.eventDescErr}
-            inputProps={{maxLength: 800, minLength: 4}}
-            rows="3"
-            rowsMax="10"
-            value={this.state.eventDescription}
-            onChange={this.handleChange('eventDescription')}
-            margin="normal"
-          />     
-        </FormControl>
-        <Grid className={this.props.classes.pickers} container spacing={24}>
-          
-          <Grid item xs={12} sm={6}>
-            <MuiPickersUtilsProvider utils={DateFnsUtils}>
-              <DateTimePicker
-                fullWidth
-                leftArrowIcon={<KeyboardArrowLeftIcon/>}
-                rightArrowIcon={<KeyboardArrowRightIcon/>}
-                timeIcon={<AccessTimeIcon/>}
-                dateRangeIcon={<DateRangeIcon/>}
-                keyboardIcon={<KeyboardIcon/>}
-                value={this.state.eventStartDate}
-                onChange={this.handleStartDateChange}
-                label="Event Start"
-              />
-            </MuiPickersUtilsProvider>
+        <Grid container> 
+          <Grid item xs={12} sm={8} className={classes.myHolder} >
+            <Typography variant="headline">Event Name</Typography>
+            <TextField
+              label="Title"
+              helperText="You want this to be short and sweet"
+              onChange={this.handleChange('name')}
+              inputProps={{maxLength: 60, minLength: 4}}
+              error={ this.state.draft.name.length !== 0 && (this.state.draft.name.length <= 3 || this.state.draft.name.length > 60) ? true : false }
+              fullWidth
+              autoFocus
+              value={this.state.draft.name}
+            />
+          </Grid> 
+          <Grid item xs={12} sm={4}></Grid>
+          <Grid item xs={12} sm={8} className={classes.myHolder}>
+            <Typography variant="headline" style={{marginBottom:5 }} >Description</Typography>
+            <ReactQuill style={{width: 100+'%'}} value={this.state.draft.description} onChange={this.handleChangeDescription} placeholder="Event description here" />  
+            <Typography className={classes.customHelper} style={{color: descriptionErr ? '#FF5252':'', fontWeight: descriptionErr ? 'bold':''}}>Description must be between 8 to 800 characters </Typography>
+          </Grid> 
+          <Grid item xs={12} sm={4}></Grid>
+          <Grid item xs={12} sm={8} className={classes.myHolder}>
+            <Typography variant="headline">Date and Time</Typography>
+            <Grid container>
+              <Grid item xs={12} sm={5}>
+                <MuiPickersUtilsProvider utils={DateFnsUtils}>
+                  <DateTimePicker
+                    leftArrowIcon={<KeyboardArrowLeftIcon/>}
+                    rightArrowIcon={<KeyboardArrowRightIcon/>}
+                    timeIcon={<AccessTimeIcon/>}
+                    dateRangeIcon={<DateRangeIcon/>}
+                    keyboardIcon={<KeyboardIcon/>}
+                    value={this.state.draft.start}
+                    onChange={this.handleStartDateChange}
+                    helperText="When does the event start?"
+                  />
+                </MuiPickersUtilsProvider>
+              </Grid>
+              <Grid item xs={12} sm={2}></Grid>
+              <Grid item xs={12} sm={5}>
+                <MuiPickersUtilsProvider utils={DateFnsUtils}>
+                  <DateTimePicker
+                    leftArrowIcon={<KeyboardArrowLeftIcon/>}
+                    rightArrowIcon={<KeyboardArrowRightIcon/>}
+                    timeIcon={<AccessTimeIcon/>}
+                    dateRangeIcon={<DateRangeIcon/>}
+                    keyboardIcon={<KeyboardIcon/>}
+                    value={this.state.draft.end}
+                    onChange={this.handleEndDateChange}
+                    helperText="When does the event end?"
+                  />
+                </MuiPickersUtilsProvider>
+              </Grid>
+            </Grid>
           </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <MuiPickersUtilsProvider utils={DateFnsUtils}>
-              <DateTimePicker
-                fullWidth
-                leftArrowIcon={<KeyboardArrowLeftIcon/>}
-                rightArrowIcon={<KeyboardArrowRightIcon/>}
-                timeIcon={<AccessTimeIcon/>}
-                dateRangeIcon={<DateRangeIcon/>}
-                keyboardIcon={<KeyboardIcon/>}
-                value={this.state.eventEndDate}
-                onChange={this.handleEndDateChange}
-                label="Event End"
-              />
-            </MuiPickersUtilsProvider>
-          </Grid>          
+          <Grid item xs={12} sm={4}></Grid>
+          <Grid item xs={12} sm={8} className={classes.myHolder}>
+            <Typography variant="headline">Other Details</Typography>
+            <TextField
+              label="Team Size"
+              value={this.state.draft.team < 1 ? 1 : this.state.draft.team}
+              inputProps={{min: 1}}
+              type="number"
+              onChange={this.handleChange('team')}
+            />
+          </Grid>
+          <Grid item xs={12} sm={4}></Grid>
         </Grid>
       </div>;
     case 1:
       return <div>
-        <Typography variant="headline" gutterBottom>Select Your Poster</Typography>
-        <Dropzone
-          onDrop={this.onDrop.bind(this)} //<= Here
-          className='dropzone'
-          activeClassName='active-dropzone'
-          multiple={true}>
-          <div className={classes.dropSpace}>
-            <Button size="small" color="secondary">
-              Upload Image or drag them here
-            </Button>
-          </div>
-        </Dropzone>
-        <Grid container spacing={24} alignItems='center'>
+        <Grid container > 
+          <Grid item xs={12} className={classes.myHolder}>
+            <Typography variant="headline">Select a Poster</Typography>
+            <Dropzone
+              onDrop={this.onDrop.bind(this)}
+              accept="image/jpeg, image/png"
+              maxSize={1500000}
+              style={{width: 100+'%'}}
+              multiple={true}>
+              <div>
+                <Button size="small" color="secondary">
+                  Click here to upload image or drag them here (max 4 files (1.5 MB per file))
+                </Button>
+              </div>
+            </Dropzone>
+            {/* <div className={classes.myHolder}>
+              <Grid spacing={24} container> 
+                
+              </Grid>
+            </div> */}
+          </Grid>
           {this.state.imageFiles.length > 0 && this.state.imageFiles.map((file, number) =>{ 
             return (
-              <Grid key={number} item xs={12} md={3} sm={4}>
+              <Grid key={number} item xs={12} sm={4} md={3}>
                 <Card className={classes.card}>
-                  <img className={this.props.classes.imagePreview} alt='' src={file.preview} />
-                  <CardActions>
-                    <FormControlLabel
-                      style={{flex: 1}}
-                      control={
-                        <Checkbox onClick={()=>this.setPoster(number)} icon={<AddAPhotoIcon />} checkedIcon={<AddAPhotoIcon />} color='primary' checked={ file.poster? true : false } />
-                      }
-                      label="Use as Cover"
-                    />
-                    <IconButton onClick={()=>this.removeImage(number)} aria-label="Delete" color="default">
-                      <DeleteIcon />
-                    </IconButton>
-                  </CardActions>
+                  <img src={file.preview} className={classes.media} />
+                  <Checkbox className={classes.image_btn} onClick={()=>this.setPoster(number)} icon={<StarBorderIcon />} checkedIcon={<StarIcon />} color='primary' checked={ file.poster? true : false } />
+                  <IconButton className={classes.image_btn} style={{float:'right'}} onClick={()=>this.removeImage(number)} aria-label="Delete" color="default">
+                    <DeleteIcon />
+                  </IconButton>
                 </Card>
               </Grid>
             );
-          } )}
-          
-        </Grid>
-        <Grid style={{marginTop: 20}} container spacing={24} alignItems='center'>
-          <Grid item xs={12} md={3} sm={4}>
-            <Typography>How many people in a team ? Students will be able to make teams and participate</Typography>
-          </Grid>
-          <Grid item xs={12} md={3} sm={4}>
-            <TextField
-              required
-              id="event_team_size"
-              label="Team Size"
-              margin="normal"
-              defaultValue="1"
-              value={this.state.eventTeamSize}
-              inputProps={{min: 1}}
-              type="number"
-              onChange={this.handleChange('eventName')}
-            />
-          </Grid>
-          <Grid item xs={12} md={6} sm={4}> </Grid>
-
-          <Grid item xs={12} md={12} sm={12}>
-            <Typography variant="headline">Contact Details</Typography>
-          </Grid>
-          <Grid item xs={12} md={3} sm={4}>
-            <TextField
+          })}
+          <Grid item xs={12} sm={8} className={classes.myHolder} >
+            <Typography variant="headline">Select Tags</Typography>
+            <div style={{minHeight: 100, backgroundColor: '#fafafa', borderRadius: 6}}>
+              {
+                this.state.draft.tags.map((value, number) => {
+                  return(
+                    <Chip
+                      style={{margin: 5}}
+                      key={number}
+                      label={value}
+                      className={classes.chip}
+                      onDelete={() => this.removeChip(number)}
+                    />
+                  );
+                })
+              }
+            </div>
+            <TextField 
+              label="Add Tags"
               fullWidth
-              label="Coordinator 1 Name"
-              margin="normal"
+              // helperText="This will help better find your audience"
+              onChange={this.handleChange('tagTemp')}
+              value={this.state.draft.tagTemp}
             />
-            <TextField
-              fullWidth
-              label="email/phone"
-              margin="normal"
-            />
-            <TextField
-              fullWidth
-              required
-              label="Other details"
-              multiline
-              inputProps={{maxLength: 140, minLength: 4}}
-              rows="3"
-              margin="normal"
-            />
-          </Grid>
-          <Grid item xs={12} md={3} sm={4}>
-            <TextField
-              fullWidth
-              style={{marginLeft: 5, marginRight: 5 }}
-              label="Coordinator 2 Name"
-              margin="normal"
-            />
-            <TextField
-              fullWidth
-              style={{marginLeft: 5, marginRight: 5 }}
-              label="email/phone"
-              margin="normal"
-            />
-            <TextField
-              fullWidth
-              style={{marginLeft: 5, marginRight: 5 }}
-              required
-              label="Other details"
-              multiline
-              inputProps={{maxLength: 140, minLength: 4}}
-              rows="3"
-              margin="normal"
-            />
-          </Grid>
-          <Grid item xs={12} md={3} sm={4}>
-            <TextField
-              fullWidth
-              style={{marginLeft: 5, marginRight: 5 }}
-              label="Coordinator 3 Name"
-              margin="normal"
-            />
-            <TextField
-              fullWidth
-              style={{marginLeft: 5, marginRight: 5 }}
-              label="email/phone"
-              margin="normal"
-            />
-            <TextField
-              fullWidth
-              style={{marginLeft: 5, marginRight: 5 }}
-              required
-              label="Other details"
-              multiline
-              inputProps={{maxLength: 140, minLength: 4}}
-              rows="3"
-              margin="normal"
-            />
-          </Grid>
-          
+            <Button variant="raised" style={{margin: 5}} onClick={this.addChip}>Add Chip</Button>
+          </Grid> 
         </Grid>
       </div>;
     case 2:
@@ -461,31 +441,9 @@ class CreateEvent extends React.Component {
     }
   }
 
-  stepFulfulled = (current) => {
-    switch(current) {
-    case 0:
-      if ( (this.state.eventName.length > 3 && this.state.eventName.length < 25 ) 
-          && ( this.state.eventDescription.length > 3 && this.state.eventDescription.length <= 800 ) && ( this.state.eventStartDate <= this.state.eventEndDate ) ) {
-        return true;
-      }
-      return false;
-    case 1:
-      if(this.state.imageFiles.length > 0) {
-        return true;
-      }
-      return false;
-    default:
-      return false;
-    }
-  }
+  
 
-  handleNext = () => {
-    if(this.stepFulfulled(this.state.activeStep)) {
-      this.setState({
-        activeStep: this.state.activeStep + 1,
-      });
-    }
-  };
+  
 
   handleBack = () => {
     this.setState({
@@ -499,20 +457,7 @@ class CreateEvent extends React.Component {
     });
   };
 
-  handleStartDateChange = (date) => {
-    this.setState({ eventStartDate: date });
-    if (!(this.state.eventEndDate >= date)) {
-      this.setState({ eventEndDate: date });
-    }
-  }
-  
-  handleEndDateChange = (date) => {
-    if (date >= this.state.eventStartDate){
-      this.setState({ eventEndDate: date });
-    } else {
-      this.setState({ eventEndDate: this.state.eventStartDate });
-    }
-  }
+
 
   render() {
     const { classes } = this.props;
@@ -527,7 +472,7 @@ class CreateEvent extends React.Component {
                 <StepLabel>{label}</StepLabel>
                 <StepContent>
                   {this.getStepContent(index)}
-                  <div className={classes.actionsContainer}>
+                  <div>
                     <div>
                       <Button
                         disabled={activeStep === 0}
@@ -552,7 +497,7 @@ class CreateEvent extends React.Component {
           })}
         </Stepper>
         {activeStep === steps.length && (
-          <Paper square elevation={0} className={classes.resetContainer}>
+          <Paper square elevation={0}>
             <Typography>All steps completed - you&quot;re finished</Typography>
             <Button onClick={this.handleReset} className={classes.button}>
               Reset
