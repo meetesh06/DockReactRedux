@@ -1,8 +1,10 @@
 import express from 'express';
 import api from './api';
 import config from './config';
+import compression from 'compression';
 
 const server = express();
+server.use(compression());
 server.set('view engine', 'ejs');
 server.use(express.static('public'));
 
