@@ -51,6 +51,10 @@ class Login extends React.Component {
     password: null,
     loading: false
   };
+  componentWillMount() {
+    sessionStorage.removeItem('draft');
+    localStorage.removeItem('token');
+  }
   handleClick = () => {
     this.setState({ open: true });
   };

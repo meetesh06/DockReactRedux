@@ -33,67 +33,9 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css'; 
 import '../css/CreateEvent.css';
 import Chip from 'material-ui/Chip';
-import Input, { InputLabel, InputAdornment } from 'material-ui/Input';
 
-import SendIcon from '@material-ui/icons/Send';
-
-const data = [
-  {
-    'label': 'FET',
-    'children': [
-      {
-        'label': 'FET-CSE',
-        'children': [
-          {
-            'label': 'FET-CSE-SEM4',
-            'children': [
-              {
-                'label': '4CSA'
-              },
-              {
-                'label': '4CSB'
-              },
-              {
-                'label': '4CSC'
-              }
-            ]
-          },
-          {
-            'label': 'FET-CSE-SEM6',
-            'children': [
-              {
-                'label': '6BAO'
-              }
-            ]
-          },
-        ]
-      },
-      {
-        'label': 'FET-ECE',
-        'children': [
-          {
-            'label': 'FET-ECE-SEM4'
-          },
-          {
-            'label': 'FET-ECE-SEM6'
-          }
-        ]
-      },
-      {
-        'label': 'FET-CIVIL',
-        'children': [
-          {
-            'label': 'FET-CIVIL-SEM4'
-          },
-          {
-            'label': 'FET-CIVIL-SEM6'
-          }
-        ]
-      },
-      
-    ]
-  }
-];
+import Radio, { RadioGroup } from 'material-ui/Radio';
+import { FormControl, FormControlLabel } from 'material-ui/Form';
 
 const styles = theme => ({
   root: {
@@ -148,23 +90,27 @@ function getSteps() {
 class CreateEvent extends React.Component {
   constructor(props) {
     super(props);
-    this.saveTreeState = this.saveTreeState.bind(this);
     this.handleChangeDescription = this.handleChangeDescription.bind(this);
     this.addChip = this.addChip.bind(this);
+    this.tryLoading = this.tryLoading.bind(this);
   }
   state = {
     activeStep: 0,
     multiline: 'Controlled',
-    checked: [],
-    expanded: [],
     imageFiles: [],
-    audience: [],
-    audienceToSend: [],
-    dataAudience: data.slice(0),
-    draft: { name: '', description: '', start: new Date(), end: new Date(), team: 1, tags: [], tagTemp: ''}
+    draft: { name: '', description: '', start: new Date(), end: new Date(), team: 1, tags: [], tagTemp: '', category: 'computer_science', audience: []}
   };
   componentWillUnmount() {
-    console.log(this.state.draft);
+    sessionStorage.setItem('draft',JSON.stringify(this.state.draft));
+  }
+  componentDidMount() {
+    this.tryLoading(); 
+  }
+  tryLoading() {
+    const local_draft = sessionStorage.getItem('draft');
+    if(local_draft) {
+      this.setState({draft: JSON.parse(local_draft)});
+    }
   }
   handleChange = name => event => {
     this.setState({
@@ -196,6 +142,11 @@ class CreateEvent extends React.Component {
       this.setState({ draft: { ...this.state.draft, end: this.state.draft.start} });
     }
   }
+
+  handleChangeCategory = event => {
+    this.setState({ draft: { ...this.state.draft, category: event.target.value } });
+  };
+
   stepFulfulled = (current) => {
     switch(current) {
     case 0:
@@ -209,6 +160,9 @@ class CreateEvent extends React.Component {
       if(this.state.imageFiles.length > 0) {
         return true;
       }
+      break;
+    default:
+      return false;
     }
     return false;
   }
@@ -220,14 +174,12 @@ class CreateEvent extends React.Component {
     }
   };
 
-  onDrop(acceptedFiles, rejectedFiles) {
+  onDrop(acceptedFiles) {
     var toAdd = [...this.state.imageFiles];
     var current = acceptedFiles.length;
     var i;
     for(i=1;i<=current;i++) {
-      if(toAdd.length >= 4) {
-        console.log('image buffer full');
-      } else {
+      if(!(toAdd.length >= 4)) {
         toAdd.push(acceptedFiles[i-1]);
       }
     }
@@ -248,39 +200,14 @@ class CreateEvent extends React.Component {
   removeImage(number) {
     const a = this.state.imageFiles;
     a.splice(number, 1);
-    console.log('removed a file', a);
     this.setState({
       imageFiles: a
     });
   }
-  // inefficient code
-  saveTreeState(deselectedNodes, selectedNodes) {
-    var dataAudience = this.state.dataAudience;
-    deselectedNodes.map((node) => {
-      var path = node._id.split('-');
-      var i;
-      var last = dataAudience[path[0]];
-      for(i=1;i<path.length;i++) {
-        last = last.children[path[i]];
-      }
-      last['checked'] = false;
-      return true;
-    });
-    selectedNodes.map((node) => {
-      var path = node._id.split('-');
-      var i;
-      var last = dataAudience[path[0]];
-      for(i=1;i<path.length;i++) {
-        last = last.children[path[i]];
-      }
-      last['checked'] = true;
-      return true;
-    });
-    this.setState({dataAudience});
-  }
+
 
   addChip() {
-    if(this.state.draft.tagTemp.length > 3) {
+    if(this.state.draft.tagTemp.length >= 3) {
       this.setState({
         draft: { ...this.state.draft, tagTemp: '', tags: [ ...this.state.draft.tags, this.state.draft.tagTemp ] },
       });
@@ -295,7 +222,7 @@ class CreateEvent extends React.Component {
   }
   getStepContent(step) {
     const { classes } = this.props; 
-    const descriptionErr = !((this.state.draft.description.length == 0) || (this.state.draft.description.match(/(<.{1,3}>)(.{0}|<br>)(<\/.{1,3}>)/))) && (this.state.draft.description.length >= 800 || this.state.draft.description.length <= 15);
+    const descriptionErr = !((this.state.draft.description.length === 0) || (this.state.draft.description.match(/(<.{1,3}>)(.{0}|<br>)(<\/.{1,3}>)/))) && (this.state.draft.description.length >= 800 || this.state.draft.description.length <= 15);
     switch (step) {
     case 0:
       return <div> 
@@ -385,17 +312,12 @@ class CreateEvent extends React.Component {
                 </Button>
               </div>
             </Dropzone>
-            {/* <div className={classes.myHolder}>
-              <Grid spacing={24} container> 
-                
-              </Grid>
-            </div> */}
           </Grid>
           {this.state.imageFiles.length > 0 && this.state.imageFiles.map((file, number) =>{ 
             return (
               <Grid key={number} item xs={12} sm={4} md={3}>
                 <Card className={classes.card}>
-                  <img src={file.preview} className={classes.media} />
+                  <img alt='user input' src={file.preview} className={classes.media} />
                   <Checkbox className={classes.image_btn} onClick={()=>this.setPoster(number)} icon={<StarBorderIcon />} checkedIcon={<StarIcon />} color='primary' checked={ file.poster? true : false } />
                   <IconButton className={classes.image_btn} style={{float:'right'}} onClick={()=>this.removeImage(number)} aria-label="Delete" color="default">
                     <DeleteIcon />
@@ -404,6 +326,26 @@ class CreateEvent extends React.Component {
               </Grid>
             );
           })}
+          <Grid item xs={12} sm={8} className={classes.myHolder} >
+            <Typography variant="headline">Select category</Typography>
+            <FormControl required className={classes.formControl}>
+              <RadioGroup
+                value={this.state.draft.category}
+                onChange={this.handleChangeCategory}
+              >
+                <FormControlLabel value="computer_science" control={<Radio />} label="Computer Science" />
+                <FormControlLabel value="art_and_craft" control={<Radio />} label="Art and Craft" />
+                <FormControlLabel value="educational" control={<Radio />} label="Educational" />
+                <FormControlLabel value="dance" control={<Radio />} label="Dance" />
+                <FormControlLabel value="music" control={<Radio />} label="Music" />
+                <FormControlLabel value="science" control={<Radio />} label="Science" />
+                <FormControlLabel value="entrepreneurship" control={<Radio />} label="Entrepreneurship" />
+                <FormControlLabel value="internship" control={<Radio />} label="Internship" />
+                <FormControlLabel value="other" control={<Radio />} label="Other" />
+              </RadioGroup>
+            </FormControl>
+
+          </Grid>
           <Grid item xs={12} sm={8} className={classes.myHolder} >
             <Typography variant="headline">Select Tags</Typography>
             <div style={{minHeight: 100, backgroundColor: '#fafafa', borderRadius: 6}}>
@@ -433,7 +375,7 @@ class CreateEvent extends React.Component {
         </Grid>
       </div>;
     case 2:
-      return <div style={{height:200}}><Tree saveTreeState={this.saveTreeState}  dataAudience={this.state.dataAudience}/></div> ;
+      return <div style={{height:250}}><Tree /></div> ;
     case 3:
       return 'Payment and contact details';
     default:

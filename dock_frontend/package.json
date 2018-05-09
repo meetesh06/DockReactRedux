@@ -10,7 +10,6 @@
     "material-ui-pickers": "^1.0.0-rc.7",
     "react": "^16.3.2",
     "react-chat-ui": "^0.3.1",
-    "react-checkbox-tree": "^1.1.0",
     "react-dom": "^16.3.2",
     "react-dropzone": "^4.2.9",
     "react-image-preview": "^0.1.0",
