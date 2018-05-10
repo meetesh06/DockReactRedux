@@ -36,6 +36,7 @@ import Chip from 'material-ui/Chip';
 
 import Radio, { RadioGroup } from 'material-ui/Radio';
 import { FormControl, FormControlLabel } from 'material-ui/Form';
+import axios from 'axios';
 
 const styles = theme => ({
   root: {
@@ -93,6 +94,7 @@ class CreateEvent extends React.Component {
     this.handleChangeDescription = this.handleChangeDescription.bind(this);
     this.addChip = this.addChip.bind(this);
     this.tryLoading = this.tryLoading.bind(this);
+    this.handleSubmit = this.handleSubmit.bind(this);
   }
   state = {
     activeStep: 0,
@@ -129,14 +131,14 @@ class CreateEvent extends React.Component {
     }
   }
   handleStartDateChange = (date) => {
-    if (!((this.state.draft.end - date) >= 0)) {
+    if (!((new Date(this.state.draft.end) - new Date(date)) >= 0)) {
       this.setState({ draft: { ...this.state.draft, end: date, start: date} });
     } else {
       this.setState({ draft: { ...this.state.draft, start: date} });
     }
   }
   handleEndDateChange = (date) => {
-    if (date >= this.state.draft.start){
+    if ((new Date(date) - new Date(this.state.draft.start)) >= 0){
       this.setState({ draft: { ...this.state.draft, end: date} });
     } else {
       this.setState({ draft: { ...this.state.draft, end: this.state.draft.start} });
@@ -146,6 +148,27 @@ class CreateEvent extends React.Component {
   handleChangeCategory = event => {
     this.setState({ draft: { ...this.state.draft, category: event.target.value } });
   };
+
+  handleSubmit = () => {
+    // this.setState({draft: { ...JSON.parse(sessionStorage.getItem('draft')) }});
+    let images = this.state.imageFiles;
+    var formData = new FormData();
+    let i;
+    for(i=0;i<images.length;i++) {
+      formData.append('image'+i, images[i]);
+    } 
+    axios.post('api/create-event', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    // axios.post('api/create-event', { ...this.state.draft, audience: JSON.parse(sessionStorage.getItem('draft')).audience })
+    //   .then(response => {
+    //     console.log(response);
+    //   }).catch(() => {
+    //     console.log('an error has occured');
+    //   });
+  }
 
   stepFulfulled = (current) => {
     switch(current) {
@@ -161,6 +184,11 @@ class CreateEvent extends React.Component {
         return true;
       }
       break;
+    case 2:
+      return true;
+    case 3:
+      this.handleSubmit();
+      return true;
     default:
       return false;
     }
@@ -377,7 +405,7 @@ class CreateEvent extends React.Component {
     case 2:
       return <div style={{height:250}}><Tree /></div> ;
     case 3:
-      return 'Payment and contact details';
+      return 'Currently payment gateway is under development, so you can only conduct free events';
     default:
       return 'Unknown step';
     }
@@ -429,7 +457,7 @@ class CreateEvent extends React.Component {
                         onClick={this.handleNext}
                         className={classes.button}
                       >
-                        {activeStep === steps.length - 1 ? 'Finish' : 'Next'}
+                        {activeStep === steps.length - 1 ? 'Create Event' : 'Next'}
                       </Button>
                     </div>
                   </div>
@@ -439,6 +467,7 @@ class CreateEvent extends React.Component {
           })}
         </Stepper>
         {activeStep === steps.length && (
+
           <Paper square elevation={0}>
             <Typography>All steps completed - you&quot;re finished</Typography>
             <Button onClick={this.handleReset} className={classes.button}>

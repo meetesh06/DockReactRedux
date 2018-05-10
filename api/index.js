@@ -1,13 +1,14 @@
 import express from 'express';
 const router = express.Router();
-const bodyParser = require('body-parser')
-const jsonParser = bodyParser.json()
+const bodyParser = require('body-parser');
+const jsonParser = bodyParser.json();
 
 
 router.get('/test', (req, res) => {
   const data = {message: 'Test Data Here'};
   res.json(data);
 });
+
 
 router.post('/signin', jsonParser, (req, res) => {
   const email = req.body.email;
@@ -18,6 +19,11 @@ router.post('/signin', jsonParser, (req, res) => {
   } else {
     res.sendStatus(401);
   }
+});
+
+router.post('/create-event', jsonParser, (req, res) => {
+  console.log(req.body);
+  res.sendStatus(200).send('DONE');
 });
 
 export default router;
