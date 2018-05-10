@@ -152,11 +152,26 @@ class CreateEvent extends React.Component {
   handleSubmit = () => {
     // this.setState({draft: { ...JSON.parse(sessionStorage.getItem('draft')) }});
     let images = this.state.imageFiles;
+    let audience = JSON.parse(sessionStorage.getItem('draft')).audience;
+    let audienceData = [];
     var formData = new FormData();
     let i;
+    formData.append('name', this.state.draft.name);
+    formData.append('description', this.state.draft.description);
+    formData.append('start', this.state.draft.start);
+    formData.append('end', this.state.draft.end);
+    formData.append('tags', this.state.draft.tags);
+    formData.append('team', this.state.draft.team);
+    
+    for (const key of Object.keys(audience)) {
+      audienceData.push(audience[key].label);
+    }
+
+    formData.append('audience', audienceData);
+
     for(i=0;i<images.length;i++) {
       formData.append('image'+i, images[i]);
-    } 
+    }
     axios.post('api/create-event', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
