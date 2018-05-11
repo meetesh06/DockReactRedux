@@ -418,6 +418,7 @@ class CreateEvent extends React.Component {
         </Grid>
       </div>;
     case 2:
+      sessionStorage.setItem('draft',JSON.stringify(this.state.draft));
       return <div style={{height:250}}><Tree /></div> ;
     case 3:
       return 'Currently payment gateway is under development, so you can only conduct free events';
