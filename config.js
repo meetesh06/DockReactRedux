@@ -5,4 +5,4 @@ const config = {
     return 'http://'+this.host+':'+this.port;
   }
 };
-export default config;
+module.exports = config;

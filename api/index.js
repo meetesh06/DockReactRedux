@@ -1,4 +1,4 @@
-import express from 'express';
+const express =  require('express');
 const router = express.Router();
 const bodyParser = require('body-parser');
 const jsonParser = bodyParser.json();
@@ -26,4 +26,4 @@ router.post('/create-event', jsonParser, (req, res) => {
   res.sendStatus(200).send('DONE');
 });
 
-export default router;
+module.exports = router;
