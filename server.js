@@ -8,10 +8,6 @@ var _api = require('./api');
 
 var _api2 = _interopRequireDefault(_api);
 
-var _events = require('./api/events');
-
-var _events2 = _interopRequireDefault(_events);
-
 var _config = require('./config');
 
 var _config2 = _interopRequireDefault(_config);
@@ -31,7 +27,6 @@ server.get('/', function (req, res) {
   res.render('index');
 });
 server.use('/api', _api2.default);
-server.use('/events/api', _events2.default);
 server.listen(_config2.default.port, _config2.default.host, function () {
   return console.log('API Server is live on ' + _config2.default.getHost());
 });
