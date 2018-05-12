@@ -22,7 +22,7 @@ const smtpTransport = nodemailer.createTransport({
 const TABLE_USERS_ADMIN = 'users_admin';
 const TABLE_USERS = "users";
 const random = require('hat');
-const jwt = require('nJwt');
+const jwt = require('njwt');
 
 var MongoClient = require('mongodb').MongoClient;
 var url = 'mongodb://dock:D2ckD2ck@103.227.177.152:27017/dock';
