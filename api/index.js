@@ -34,8 +34,9 @@ MongoClient.connect(url, function(err, db) {
     let dbo = db.db('dock');
     router.use(fileUpload());
 
-    router.get('/test', (req, res) => {
-        const data = {
+    router.post('/test', (req, res) => {
+        console.log("this is a test");
+	const data = {
             message: 'Test Data Here'
         };
         var text = 'This is a text';
@@ -56,7 +57,6 @@ MongoClient.connect(url, function(err, db) {
         });
         res.json(data);
     });
-
     router.post('/signin', jsonParser, (req, res) => {
         const email = req.body.email;
         const password = req.body.password;
@@ -97,6 +97,23 @@ MongoClient.connect(url, function(err, db) {
         });
     });
 
+    function sendTestMail(){
+        var text = 'This is a text';
+        var mailOptions = {
+            from: 'support@mycampusdock.com',
+            to: 'androidrajpoot@gmail.com',
+            subject: 'This is a test email!',
+            text: text
+        };
+        smtpTransport.sendMail(mailOptions, function(error, response) {
+            if (error) {
+                console.log(error);
+            } else {
+                console.log('Message sent to: ' + req.session.email);
+            }
+        });
+    }
+
     function saveEventToDB(event_name, event_description, event_start, event_end, event_tags, event_audience, media, callback){
         var creator = 'OGIL';
         var event_id = creator + '-' + UID(6);
@@ -114,6 +131,7 @@ MongoClient.connect(url, function(err, db) {
         };
         dbo.collection(TABLE_EVENTS).insertOne(params, function(err, data) {
             if(err) callback(err);
+	    sendTestMail();
             callback(null);
         });
     }

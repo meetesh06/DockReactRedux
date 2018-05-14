@@ -1,31 +1,18 @@
-'use strict';
+const compression = require('compression');
+const config = require('./config');
+const api = require('./api');
+const express = require('express');
+var path = require('path');
 
-var _express = require('express');
-
-var _express2 = _interopRequireDefault(_express);
-
-var _api = require('./api');
-
-var _api2 = _interopRequireDefault(_api);
-
-var _config = require('./config');
-
-var _config2 = _interopRequireDefault(_config);
-
-var _compression = require('compression');
-
-var _compression2 = _interopRequireDefault(_compression);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-var server = (0, _express2.default)();
-server.use((0, _compression2.default)());
+const server = express();
+server.use(compression());
 server.set('view engine', 'ejs');
-server.use(_express2.default.static('public'));
-server.get('/', function (req, res) {
-  res.render('index');
+server.use(express.static(path.join(__dirname, 'dock_frontend/build')));
+
+server.use('/', api);
+
+server.get('*', function(req, res) {
+  res.sendFile(path.resolve(__dirname,'dock_frontend/build/index.html'));
 });
-server.use('/', _api2.default);
-server.listen(_config2.default.port, _config2.default.host, function () {
-  return console.log('API Server is live on ' + _config2.default.getHost());
-});
+
+server.listen(config.port, config.host, () => console.log('API Server is live on '+config.getHost()));
