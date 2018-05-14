@@ -21,6 +21,8 @@ const smtpTransport = nodemailer.createTransport({
 });
 const TABLE_USERS_ADMIN = 'users_admin';
 const TABLE_USERS = "users";
+const TABLE_EVENTS = 'events';
+
 const random = require('hat');
 const jwt = require('njwt');
 
@@ -65,8 +67,7 @@ MongoClient.connect(url, function(err, db) {
             }
             if(data)
             if(passwordHash.verify(password, data.password)){
-
-              res.json({
+                res.json({
                     token: getLoginToken(data._id)
                 });
             } else {
@@ -75,11 +76,59 @@ MongoClient.connect(url, function(err, db) {
         });
     });
 
-    router.post('/events/create-event', urlencodedParser, (req, res) => {
+    router.post('/events/create-event', urlencodedParser, (req, res) => { //attach username with this data
+        if(!req.body) return res.status(400).send('no body');
         console.log(req.body);
-        console.log(req.files);
-        res.status(200).send('DONE');
+        var event_name = req.body.name;
+        var event_description = req.body.description;
+        var event_start = req.body.start;
+        var event_end = req.body.end;
+        var event_tags = req.body.tags;
+        var event_audience = req.body.audience;
+        saveFiles(req.files, res, function(media, err){
+            if(err) 
+                res.sendStatus(400);
+            else{
+                saveEventToDB(event_name, event_description, event_start, event_end, event_tags, event_audience, media, function(err){
+                    console.log('Err:'+err);
+                });
+            }
+        });
     });
+
+    function saveEventToDB(event_name, event_description, event_start, event_end, event_tags, event_audience, media, callback){
+        var creator = 'OGIL';
+        var event_id = creator + '-' + UID(6);
+        var params = {
+            event_id: event_id,
+            creator_name: creator,
+            event_name: event_name,
+            event_description: event_description,
+            event_audience: event_audience,
+            event_media: media,
+            event_start: event_start,
+            event_end: event_end,
+            event_tags: event_tags,
+            event_reach : 1
+        };
+        dbo.collection(TABLE_EVENTS).insertOne(params, function(err, data) {
+            if(err) callback(err);
+            callback(null);
+        });
+    }
+
+    function saveFiles(files, res, callback){  //mv function takes absolute path
+        var media  = [];
+        Object.entries(files).forEach(([key, value]) => {
+            var filename = random() + '-' + value.name;
+            var loc = __dirname + '/events/media/' + filename;
+            media.push(loc);
+            value.mv(loc, function(err){
+                if(err) callback(null, err);
+            });
+        });
+        callback(media, null);
+    }
 
     function getLoginToken(id){
       var secretKey = random();
@@ -92,6 +141,16 @@ MongoClient.connect(url, function(err, db) {
       var jwtin = jwt.create(claims,secretKey);
       var token = jwtin.compact();
       return token;
+    }
+
+    function UID(length) {
+      var text = "";
+      var possible = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+      for (var i = 0; i < length; i++)
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+
+      return text;
     }
 });
 

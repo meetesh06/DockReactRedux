@@ -9,7 +9,7 @@ import {
 export const signinUser = ({ email, password }) => {
   return (dispatch) => {
     // submit email/password to the server
-    axios.post('api/signin', { email, password })
+    axios.post('signin', { email, password })
       .then(response => {
         // if request is good...
         // - update state to indicate user is authenticated

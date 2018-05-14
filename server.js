@@ -22,11 +22,10 @@ var server = (0, _express2.default)();
 server.use((0, _compression2.default)());
 server.set('view engine', 'ejs');
 server.use(_express2.default.static('public'));
-
 server.get('/', function (req, res) {
   res.render('index');
 });
-server.use('/api', _api2.default);
+server.use('/', _api2.default);
 server.listen(_config2.default.port, _config2.default.host, function () {
   return console.log('API Server is live on ' + _config2.default.getHost());
 });

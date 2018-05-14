@@ -172,7 +172,7 @@ class CreateEvent extends React.Component {
     for(i=0;i<images.length;i++) {
       formData.append('image'+i, images[i]);
     }
-    axios.post('api/create-event', formData, {
+    axios.post('create-event', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
