@@ -91,6 +91,7 @@ MongoClient.connect(url, function(err, db) {
             else{
                 saveEventToDB(event_name, event_description, event_start, event_end, event_tags, event_audience, media, function(err){
                     console.log('Err:'+err);
+                    res.status(200).send('ok');
                 });
             }
         });
