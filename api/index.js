@@ -24,9 +24,9 @@ const jwt = require('jsonwebtoken');
 const random = require('hat');
 const APP_SECRET_KEY = 'IaMnOtMeDiOcRe';
 
-const MAIL_EVENT_TITLE = 'New Event Created';
+const MAIL_EVENT_TITLE = 'New Event Created | CampusDock';
 const MAIL_EVENT_TEXT = 'You have successfully created a new Event.\n';
-const MAIL_EVENT_DEATILS_TITLE = 'Event Title : ';
+const MAIL_EVENT_DEATILS_TITLE = 'Event Title: ';
 const MAIL_EVENT_FOOTER = '\nYou can check the event details on Web Portal.\nFor any technical issue, feel free to write at help@mycampusdock.com.';
 
 var MongoClient = require('mongodb').MongoClient;
@@ -131,12 +131,13 @@ MongoClient.connect(url, function(err, db) {
             mssg: 'No token provided.'
         });
         console.log(req.body);
-
+        var email;
         jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
             if (err) return res.status(500).send({
                 auth: false,
                 message: 'Failed to authenticate token.'
             });
+            email =  decoded.email;
         });
 
         if (!req.body) return res.status(400).send({
@@ -169,7 +170,7 @@ MongoClient.connect(url, function(err, db) {
             if (err)
                 res.sendStatus(400);
             else {
-                saveEventToDB(event_name, event_description, event_start, event_end, event_tags, event_audience, media, function(err) {
+                saveEventToDB(email, event_name, event_description, event_start, event_end, event_tags, event_audience, media, function(err) {
                     sendToScope(event_audience.split(','), payload, function(err) {
                         if (err) return res.status(400).json({
                             error: true,
@@ -218,8 +219,8 @@ MongoClient.connect(url, function(err, db) {
         var mailOptions = {
             from: 'support@mycampusdock.com',
             to: email,
-            text: 'This is your verification PIN : ' + pin + '. This PIN is valid for 2 hours only! Never share your PIN with anyone. If you didn\'t requested PIN, please ignore!',
-            subject: 'Verify your E-mail'
+            text: 'This is your verification PIN : ' + pin + '.\nThis PIN is valid for 2 hours only.\nNever share your PIN with anyone. If you didn\'t requested PIN, please ignore!',
+            subject: 'Verify your E-mail | CampusDock'
         };
         smtpTransport.sendMail(mailOptions, function(error, response) {
             if (error) {
@@ -230,8 +231,8 @@ MongoClient.connect(url, function(err, db) {
         });
     }
 
-    function saveEventToDB(event_name, event_description, event_start, event_end, event_tags, event_audience, media, callback) {
-        var creator = 'androidrajpoot@gmail.com';
+    function saveEventToDB(email, event_name, event_description, event_start, event_end, event_tags, event_audience, media, callback) {
+        var creator = email;
         var event_id = creator + '-' + UID(6);
         var params = {
             event_id: event_id,
