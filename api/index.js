@@ -32,7 +32,7 @@ const MAIL_EVENT_FOOTER = '\nYou can check the event details on Web Portal.\nFor
 var MongoClient = require('mongodb').MongoClient;
 var url = 'mongodb://dock:D2ckD2ck@103.227.177.152:27017/dock';
 
-MongoClient.connect(url, function(err, db) {
+MongoClient.connect(url, { useNewUrlParser: true }, function(err, db) {
     if (err) throw err;
     let dbo = db.db('dock');
     router.use(fileUpload());
