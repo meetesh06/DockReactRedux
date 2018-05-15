@@ -1,0 +1,12 @@
+{
+  "type": "service_account",
+  "project_id": "mycampusdock-12f5a",
+  "private_key_id": "80c4ab4c6c6f78c29914865222829557855c6fa5",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCj17JsFzuGVJ7d\nkFG/6Es17iBT2DMFqImB5bH43sb1lBNV4nCPeqYjjdwLsCDfJylvvlNIQdba0FwD\nDjy8Cwul0x55dYvlbYzWTN09YfzW9jREmhr3z/P/1ChiZCDCfFAJoG+a3ChObC7V\nu6RQKSH8AW0LK0dsQ4B6ZFM3ClToH69bJC7v6lTERFCGdTrjh+NgQhzZa9E4jxag\n4NMxH6G0vjTvHUhJt2dt9eXSCdyWeenMjmHx1TCmobzDBwc1KgnnCXAH4B/3z6/S\neqPgi1ciOlB9KHb344TQ/4a9buxco/7xFEkHZ7XrvdzCZKOM8E2uMEWVWRe+l4lM\nxZ8q78fLAgMBAAECggEATiXEoY/XQXQ9Lhr3ExzeOsPwwW0esPU5WS7Q246OwXW2\nX0GZRKZQdibkrOJ+W1HXjsft+0oEC+xT5tU0nNB75sUzBOXPK0g8Y77Xy75gFbvr\nJEmI0WhrzjtIY920Tm9y0ZSnhuq5guZQ1HsinWVxIz0e4LPs5jOwJTCTDG6uHuSy\nj2jF37zu+I5lZjpO2TF8705gwKZ4C0kXw45c7QEz88/HpfwP50pyUoUxlJtpqKb6\nqoQ7lNoGSbYgAlGS+AHI9h9/XXcghEQWtoMsseHC1QIoXjHU1KZoIsV70SuHpLJH\norY4XMwmnM5JVUXZI2mmcx1KjL1bNbPyyWfHr4oIMQKBgQDS+KGZQyKWQPT02h4D\nqZerehIoYEV4Qafngwiks4/B1z2BG5dK4JscebvPggcU8xdsHAWGdRrUyoqC0ffh\noJS1KFe7aeKT+0FaXYxLoEAhaufqx09FCgojW1CGiWvJyP+Z/R5xbCAXLMBmEHtm\n0V54Y2CDNDsgiCjxawZvEvNDMwKBgQDGz/pyKRN1thD+jUefPSVcIb9+jOSpMTQ5\nPen/kaqhYM84kN7KhGuMD9rCR79gfTlV3hP5WJDT+J68A5qbGNToUJa/2ohLvmh0\n9zAt97JzZwGSFk3r+jjEZ84mPRusOfMo24HaCero9gAwjeZVsU00gcY8zEE0w/bO\nvcgOduPpCQKBgHh0w3fJkDbwEay32QlITLP4t+NbzG50NlUGSOoZKAyKQ7Cyuzhi\nc83XZ7d8S2TXw1jTywfRVyeGGX3GOt0VnbKtvSHhvB+4BsF8xjzr25H5Az/W2tjV\neaJkYd7fGa8V13LpxfcGwG/a+mOMJ5k2E9VzEEj5ioTxmUb2T68dx81nAoGAZRtF\n4aLUG6vgzqOoxenBwy4Cheg/LXAxf97lzqwU24cxOzIpq1JWo184wE7em8JzUyDi\nhY8t8C7jAvjOOowRUqgRUjZf1C1cUAeZv/bVEO1UliezrwuMrQ2hgD7ZgOfjqmaf\njfQ3PAxHImo3tmK5wbcxyp+RlbUHIjLPt9NsqokCgYAQKGRHlrDNooU19kMP+6oh\nvX3S3XjT77GNaJfbeyoWRblQ4AR3WSTahi/IF5x1MD5Ud82+f1ZfoRZE2CtXi7Ml\nRVaQLp5+O9PD+W8/CjMN60fOl2xn1Kiv8QMZpoyid7ieZYWxFNPgQSDf4ymxhUik\nThlObAJDb55qBuJoDC+9FQ==\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-22cti@mycampusdock-12f5a.iam.gserviceaccount.com",
+  "client_id": "106518980688106866409",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://accounts.google.com/o/oauth2/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-22cti%40mycampusdock-12f5a.iam.gserviceaccount.com"
+}

@@ -5,7 +5,8 @@ const fileUpload = require('express-fileupload');
 const passwordHash = require('password-hash');
 const nodemailer = require('nodemailer');
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0;
-
+const admin = require("firebase-admin");
+const serviceAccount = require("./admincred.json");
 const smtpTransport = nodemailer.createTransport({
     host: 'mail.mycampusdock.com',
     port: 465,
@@ -24,9 +25,9 @@ const random = require('hat');
 const APP_SECRET_KEY = 'IaMnOtMeDiOcRe';
 
 const MAIL_EVENT_TITLE = 'New Event Created';
-const MAIL_EVENT_TEXT = 'You have successfully created a new Event.';
+const MAIL_EVENT_TEXT = 'You have successfully created a new Event.\n';
 const MAIL_EVENT_DEATILS_TITLE = 'Event Title : ';
-const MAIL_EVENT_FOOTER = 'You can check the event details on Web Portal. For any technical issue, feel free to write at help@mycampusdock.com.';
+const MAIL_EVENT_FOOTER = '\nYou can check the event details on Web Portal.\nFor any technical issue, feel free to write at help@mycampusdock.com.';
 
 var MongoClient = require('mongodb').MongoClient;
 var url = 'mongodb://dock:D2ckD2ck@103.227.177.152:27017/dock';
@@ -39,6 +40,11 @@ MongoClient.connect(url, function(err, db) {
         extended: false
     }));
     router.use(bodyParser.json());
+    admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        databaseURL: "https://mycampusdock-12f5a.firebaseio.com"
+    });
+
     router.post('/signin', (req, res) => {
         if (!req.body) return res.sendStatus(400);
         const email = req.body.email;
@@ -91,7 +97,7 @@ MongoClient.connect(url, function(err, db) {
         });
     });
 
-    router.post('/android/verify', (req, res) => { //token verification
+    router.post('/android/verify', (req, res) => {
         var token = req.headers['x-access-token'];
         if (!token) return res.status(401).send({
             auth: false,
@@ -105,51 +111,74 @@ MongoClient.connect(url, function(err, db) {
                 message: 'Not a valid token!'
             });
             console.log(decoded);
-            if(decoded.pin == req.body.pin && decoded.email == req.body.email){
+            if (decoded.pin == req.body.pin && decoded.email == req.body.email) {
                 return res.status(200).json({
-                    error : false
+                    error: false
                 });
-            } 
-            else{
+            } else {
                 return res.status(400).json({
-                    error : true,
-                    mssg : 'Not valid credentials!'
+                    error: true,
+                    mssg: 'Not valid credentials!'
                 });
             }
         });
     });
 
     router.post('/events/create-event', (req, res) => { //token verification
-        /* var token = req.headers['x-access-token'];
+        var token = req.headers['x-access-token'];
         if (!token) return res.status(401).send({
             auth: false,
             mssg: 'No token provided.'
         });
+        console.log(req.body);
 
         jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
             if (err) return res.status(500).send({
                 auth: false,
                 message: 'Failed to authenticate token.'
             });
-        }); */
+        });
+
         if (!req.body) return res.status(400).send({
             error: true,
             mssg: 'no body'
         });
-        console.log(req.body);
+
         var event_name = req.body.name;
         var event_description = req.body.description;
         var event_start = req.body.start;
         var event_end = req.body.end;
         var event_tags = req.body.tags;
         var event_audience = req.body.audience;
+        data = {
+            event_name: event_name,
+            event_description: event_description,
+            event_start: event_start,
+            event_end: event_end,
+            event_tags: event_tags,
+            event_audience: event_audience
+        };
+
+        payload = {
+            data: {
+                content: JSON.stringify(data)
+            }
+        };
+
         saveFiles(req.files, res, function(media, err) {
             if (err)
                 res.sendStatus(400);
             else {
                 saveEventToDB(event_name, event_description, event_start, event_end, event_tags, event_audience, media, function(err) {
-                    console.log('Err:' + err);
-                    res.status(200).send('ok');
+                    sendToScope(event_audience.split(','), payload, function(err) {
+                        if (err) return res.status(400).json({
+                            error: true,
+                            mssg: err
+                        });
+                        else return res.status(200).json({
+                            error: false
+                        });
+                    })
                 });
             }
         });
@@ -171,11 +200,25 @@ MongoClient.connect(url, function(err, db) {
         });
     }
 
-    function sendVerificationMail(email, pin){
+    function sendToScope(scopeArray, payload, callback) {
+        for (i = 0; i < scopeArray.length; i++) {
+            admin.messaging().sendToTopic(scopeArray[i], payload)
+                .then(function(response) {
+                    console.log(response);
+                })
+                .catch(function(error) {
+                    console.log("Error sending message:", error);
+                    return callback(error)
+                });
+        }
+        return callback(null);
+    }
+
+    function sendVerificationMail(email, pin) {
         var mailOptions = {
             from: 'support@mycampusdock.com',
             to: email,
-            text: 'This is your verification PIN : ' + pin +'. This PIN is valid for 2 hours only! Never share your PIN with anyone. If you didn\'t requested PIN, please ignore!',
+            text: 'This is your verification PIN : ' + pin + '. This PIN is valid for 2 hours only! Never share your PIN with anyone. If you didn\'t requested PIN, please ignore!',
             subject: 'Verify your E-mail'
         };
         smtpTransport.sendMail(mailOptions, function(error, response) {
