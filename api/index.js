@@ -1,11 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const jsonParser = bodyParser.json();
 const router = express.Router();
 const fileUpload = require('express-fileupload');
-var urlencodedParser = bodyParser.urlencoded({
-    extended: false
-});
 const passwordHash = require('password-hash');
 const nodemailer = require('nodemailer');
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0;
@@ -19,12 +15,18 @@ const smtpTransport = nodemailer.createTransport({
         pass: 'D@ckD@ck'
     }
 });
+
 const TABLE_USERS_ADMIN = 'users_admin';
 const TABLE_USERS = "users";
 const TABLE_EVENTS = 'events';
-
+const jwt = require('jsonwebtoken');
 const random = require('hat');
-const jwt = require('njwt');
+const APP_SECRET_KEY = 'IaMnOtMeDiOcRe';
+
+const MAIL_EVENT_TITLE = 'New Event Created';
+const MAIL_EVENT_TEXT = 'You have successfully created a new Event.';
+const MAIL_EVENT_DEATILS_TITLE = 'Event Title : ';
+const MAIL_EVENT_FOOTER = 'You can check the event details on Web Portal. For any technical issue, feel free to write at help@mycampusdock.com.';
 
 var MongoClient = require('mongodb').MongoClient;
 var url = 'mongodb://dock:D2ckD2ck@103.227.177.152:27017/dock';
@@ -33,51 +35,107 @@ MongoClient.connect(url, function(err, db) {
     if (err) throw err;
     let dbo = db.db('dock');
     router.use(fileUpload());
-
-    router.post('/test', (req, res) => {
-        console.log("this is a test");
-	const data = {
-            message: 'Test Data Here'
-        };
-        var text = 'This is a text';
-        var mailOptions = {
-            from: 'support@mycampusdock.com',
-            to: 'meeteshmehta4@gmail.com',
-            subject: 'This is a test email!',
-            text: text
-        };
-        smtpTransport.sendMail(mailOptions, function(error, response) {
-            if (error) {
-                console.log(error);
-                res.end('error');
-            } else {
-                console.log('Message sent to: ' + req.session.email);
-                res.end('sent');
-            }
-        });
-        res.json(data);
-    });
-    router.post('/signin', jsonParser, (req, res) => {
+    router.use(bodyParser.urlencoded({
+        extended: false
+    }));
+    router.use(bodyParser.json());
+    router.post('/signin', (req, res) => {
+        if (!req.body) return res.sendStatus(400);
         const email = req.body.email;
         const password = req.body.password;
-        if (!req.body) return res.sendStatus(400);
-        dbo.collection(TABLE_USERS_ADMIN).findOne({email: email}, function(err, data) {
+        dbo.collection(TABLE_USERS_ADMIN).findOne({
+            email: email
+        }, function(err, data) {
             if (err) {
                 return res.sendStatus(402);
             }
-            if(data)
-            if(passwordHash.verify(password, data.password)){
-                res.json({
-                    token: getLoginToken(data._id)
+            if (data)
+                if (passwordHash.verify(password, data.password)) {
+                    const JWTToken = jwt.sign({
+                            email: email,
+                            _id: data._id
+                        },
+                        APP_SECRET_KEY, {
+                            expiresIn: '4d'
+                        });
+                    res.status(200).json({
+                        error: false,
+                        token: JWTToken
+                    });
+                } else {
+                    return res.sendStatus(401);
+                }
+            else
+                return res.status(401).json({
+                    error: true,
+                    mssg: 'User does not exists!'
                 });
-            } else {
-                return res.sendStatus(401);
+        });
+    });
+
+    router.post('/android/signin', (req, res) => {
+        if (!req.body) return res.sendStatus(400);
+        const email = req.body.email;
+        var pin = Math.floor(Math.random() * 1000000);
+        sendVerificationMail(email, pin);
+        const JWTToken = jwt.sign({
+                email: email,
+                pin: pin
+            },
+            APP_SECRET_KEY, {
+                expiresIn: '2h'
+            });
+        return res.status(200).json({
+            error: false,
+            token: JWTToken
+        });
+    });
+
+    router.post('/android/verify', (req, res) => { //token verification
+        var token = req.headers['x-access-token'];
+        if (!token) return res.status(401).send({
+            auth: false,
+            mssg: 'No token provided.'
+        });
+        console.log(req.body);
+
+        jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
+            if (err) return res.status(500).send({
+                auth: false,
+                message: 'Not a valid token!'
+            });
+            console.log(decoded);
+            if(decoded.pin == req.body.pin && decoded.email == req.body.email){
+                return res.status(200).json({
+                    error : false
+                });
+            } 
+            else{
+                return res.status(400).json({
+                    error : true,
+                    mssg : 'Not valid credentials!'
+                });
             }
         });
     });
 
-    router.post('/events/create-event', urlencodedParser, (req, res) => { //attach username with this data
-        if(!req.body) return res.status(400).send('no body');
+    router.post('/events/create-event', (req, res) => { //token verification
+        /* var token = req.headers['x-access-token'];
+        if (!token) return res.status(401).send({
+            auth: false,
+            mssg: 'No token provided.'
+        });
+
+        jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
+            if (err) return res.status(500).send({
+                auth: false,
+                message: 'Failed to authenticate token.'
+            });
+        }); */
+        if (!req.body) return res.status(400).send({
+            error: true,
+            mssg: 'no body'
+        });
         console.log(req.body);
         var event_name = req.body.name;
         var event_description = req.body.description;
@@ -85,24 +143,23 @@ MongoClient.connect(url, function(err, db) {
         var event_end = req.body.end;
         var event_tags = req.body.tags;
         var event_audience = req.body.audience;
-        saveFiles(req.files, res, function(media, err){
-            if(err) 
+        saveFiles(req.files, res, function(media, err) {
+            if (err)
                 res.sendStatus(400);
-            else{
-                saveEventToDB(event_name, event_description, event_start, event_end, event_tags, event_audience, media, function(err){
-                    console.log('Err:'+err);
+            else {
+                saveEventToDB(event_name, event_description, event_start, event_end, event_tags, event_audience, media, function(err) {
+                    console.log('Err:' + err);
                     res.status(200).send('ok');
                 });
             }
         });
     });
 
-    function sendTestMail(){
-        var text = 'This is a text';
+    function sendMail(reciever, subject, text) {
         var mailOptions = {
             from: 'support@mycampusdock.com',
-            to: 'androidrajpoot@gmail.com',
-            subject: 'This is a test email!',
+            to: reciever,
+            subject: subject,
             text: text
         };
         smtpTransport.sendMail(mailOptions, function(error, response) {
@@ -114,8 +171,24 @@ MongoClient.connect(url, function(err, db) {
         });
     }
 
-    function saveEventToDB(event_name, event_description, event_start, event_end, event_tags, event_audience, media, callback){
-        var creator = 'OGIL';
+    function sendVerificationMail(email, pin){
+        var mailOptions = {
+            from: 'support@mycampusdock.com',
+            to: email,
+            text: 'This is your verification PIN : ' + pin +'. This PIN is valid for 2 hours only! Never share your PIN with anyone. If you didn\'t requested PIN, please ignore!',
+            subject: 'Verify your E-mail'
+        };
+        smtpTransport.sendMail(mailOptions, function(error, response) {
+            if (error) {
+                console.log(error);
+            } else {
+                console.log('Message sent to: ' + req.session.email);
+            }
+        });
+    }
+
+    function saveEventToDB(event_name, event_description, event_start, event_end, event_tags, event_audience, media, callback) {
+        var creator = 'androidrajpoot@gmail.com';
         var event_id = creator + '-' + UID(6);
         var params = {
             event_id: event_id,
@@ -127,49 +200,36 @@ MongoClient.connect(url, function(err, db) {
             event_start: event_start,
             event_end: event_end,
             event_tags: event_tags,
-            event_reach : 1
+            event_reach: 1
         };
         dbo.collection(TABLE_EVENTS).insertOne(params, function(err, data) {
-            if(err) callback(err);
-	    sendTestMail();
+            if (err) callback(err);
+            sendMail(creator, MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + event_name + MAIL_EVENT_FOOTER);
             callback(null);
         });
     }
 
-    function saveFiles(files, res, callback){  //mv function takes absolute path
-        var media  = [];
+    function saveFiles(files, res, callback) {
+        var media = [];
         Object.entries(files).forEach(([key, value]) => {
             var filename = random() + '-' + value.name;
             var loc = __dirname + '/events/media/' + filename;
             media.push(loc);
-            value.mv(loc, function(err){
-                if(err) callback(null, err);
+            value.mv(loc, function(err) {
+                if (err) callback(null, err);
             });
         });
         callback(media, null);
     }
 
-    function getLoginToken(id){
-      var secretKey = random();
-      var claims = {
-        user: id,
-        iss: '/api',
-        permissions: 'admin-user'
-      }
-
-      var jwtin = jwt.create(claims,secretKey);
-      var token = jwtin.compact();
-      return token;
-    }
-
     function UID(length) {
-      var text = "";
-      var possible = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        var text = "";
+        var possible = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
-      for (var i = 0; i < length; i++)
-        text += possible.charAt(Math.floor(Math.random() * possible.length));
+        for (var i = 0; i < length; i++)
+            text += possible.charAt(Math.floor(Math.random() * possible.length));
 
-      return text;
+        return text;
     }
 });
 
@@ -204,4 +264,3 @@ module.exports = router;
 //  updated scope timestamp
 //  
 // scope table
-//
