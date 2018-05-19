@@ -97,7 +97,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function(err, db) {
         });
     });
 
-    router.post('/android/verify', (req, res) => {
+    router.post('/android/signin/verify', (req, res) => {
         var token = req.headers['x-access-token'];
         if (!token) return res.status(401).send({
             auth: false,
@@ -187,7 +187,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function(err, db) {
 
     function sendMail(reciever, subject, text) {
         var mailOptions = {
-            from: 'support@mycampusdock.com',
+            from: '"Campus Dock" <support@mycampusdock.com>',
             to: reciever,
             subject: subject,
             text: text
@@ -217,7 +217,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function(err, db) {
 
     function sendVerificationMail(email, pin) {
         var mailOptions = {
-            from: 'support@mycampusdock.com',
+            from: '"Campus Dock" <support@mycampusdock.com>',
             to: email,
             text: 'This is your verification PIN : ' + pin + '.\nThis PIN is valid for 2 hours only.\nNever share your PIN with anyone. If you didn\'t requested PIN, please ignore!',
             subject: 'Verify your E-mail | CampusDock'
