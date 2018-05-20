@@ -24,7 +24,7 @@ const jwt = require('jsonwebtoken');
 const random = require('hat');
 const APP_SECRET_KEY = 'IaMnOtMeDiOcRe';
 
-const MAIL_EVENT_TITLE = 'New Event Created | CampusDock';
+const MAIL_EVENT_TITLE = 'New Event Created';
 const MAIL_EVENT_TEXT = 'You have successfully created a new Event.\n';
 const MAIL_EVENT_DEATILS_TITLE = 'Event Title: ';
 const MAIL_EVENT_FOOTER = '\nYou can check the event details on Web Portal.\nFor any technical issue, feel free to write at help@mycampusdock.com.';
@@ -85,9 +85,7 @@ MongoClient.connect(url, {
         if (!req.body) return res.sendStatus(400);
         const email = req.body.email;
         var pin = Math.floor(Math.random() * 1000000);
-        console.log('android req');
         sendVerificationMail(email, pin, function(error) {
-            console.log(error);
             if (error) return res.status(400).json({
                 error: true,
                 mssg: error
@@ -202,7 +200,7 @@ MongoClient.connect(url, {
         });
     });
 
-    function sendMail(reciever, subject, text, callback) {
+    function mail(reciever, subject, text, callback) {
         var mailOptions = {
             from: '"Campus Dock" <support@mycampusdock.com>',
             to: reciever,
@@ -210,20 +208,14 @@ MongoClient.connect(url, {
             text: text
         };
         smtpTransport.sendMail(mailOptions, function(error, response) {
-            if (error) {
-                console.log(error);
-                callback(error);
-            } else {
-                console.log('Message sent to: ' + req.session.email);
-                callback(null);
-            }
+            callback(error);
         });
     }
 
     function sendVerificationMail(reciever, pin, callback) {
         var text = 'This is your verification PIN : ' + pin + '.\nThis PIN is valid for 2 hours only.\nNever share your PIN with anyone. If you didn\'t requested PIN, please ignore!';
-        var subject = 'Verify your E-mail | CampusDock';
-        sendMail(reciever, subject, text, function(error){
+        var subject = 'Verify your E-mail';
+        mail(reciever, subject, text, function(error){
             callback(error);
         });
     }
@@ -259,7 +251,7 @@ MongoClient.connect(url, {
         };
         dbo.collection(TABLE_EVENTS).insertOne(params, function(err, data) {
             if (err) callback(err);
-            sendMail(creator, MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + event_name + MAIL_EVENT_FOOTER , function(error){
+            mail(creator, MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + event_name + MAIL_EVENT_FOOTER , function(error){
                 callback(error);
             });
         });
