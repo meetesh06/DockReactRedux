@@ -1,0 +1,18 @@
+TIP :session maintain : every request to backend must be an authentic request, when we start the server a new token session will be generated, and everytime an update is pushed, all changes must be cleared for new version of the app.
+
+Dictionary:
+	'*' :	denotes requested headers
+	'-' :	denotes requested params
+	'~' :	denotes responses
+	[] 	:	denotes method type
+
+1. android/signin [POST]
+	- email
+	~ error
+	~ x-access-token
+
+2. android/signin/verify [POST]
+	* x-access-token
+	- pin-entered
+	- email
+	~ error

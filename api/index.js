@@ -32,7 +32,9 @@ const MAIL_EVENT_FOOTER = '\nYou can check the event details on Web Portal.\nFor
 var MongoClient = require('mongodb').MongoClient;
 var url = 'mongodb://dock:D2ckD2ck@103.227.177.152:27017/dock';
 
-MongoClient.connect(url, { useNewUrlParser: true }, function(err, db) {
+MongoClient.connect(url, {
+    useNewUrlParser: true
+}, function(err, db) {
     if (err) throw err;
     let dbo = db.db('dock');
     router.use(fileUpload());
@@ -83,17 +85,27 @@ MongoClient.connect(url, { useNewUrlParser: true }, function(err, db) {
         if (!req.body) return res.sendStatus(400);
         const email = req.body.email;
         var pin = Math.floor(Math.random() * 1000000);
-        sendVerificationMail(email, pin);
-        const JWTToken = jwt.sign({
-                email: email,
-                pin: pin
-            },
-            APP_SECRET_KEY, {
-                expiresIn: '2h'
+        sendVerificationMail(email, pin, function(error) {
+            if (error) res.status(400).json({
+                error: true,
+                mssg: error
             });
-        return res.status(200).json({
-            error: false,
-            token: JWTToken
+
+            const JWTToken = jwt.sign({
+                    email: email,
+                    pin: pin
+                },
+                APP_SECRET_KEY, {
+                    expiresIn: '2h'
+                });
+            return res.status(200).json({
+                error: false,
+                token: JWTToken
+            });
+        });
+        res.status(400).json({
+            error: true,
+            mssg: 'Something went wrong :('
         });
     });
 
@@ -112,8 +124,15 @@ MongoClient.connect(url, { useNewUrlParser: true }, function(err, db) {
             });
             console.log(decoded);
             if (decoded.pin == req.body.pin && decoded.email == req.body.email) {
+                const JWTToken = jwt.sign({
+                        email: email
+                    },
+                    APP_SECRET_KEY, {
+                        expiresIn: '7d'
+                    });
                 return res.status(200).json({
-                    error: false
+                    error: false,
+                    token: JWTToken
                 });
             } else {
                 return res.status(400).json({
@@ -137,7 +156,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function(err, db) {
                 auth: false,
                 message: 'Failed to authenticate token.'
             });
-            email =  decoded.email;
+            email = decoded.email;
         });
 
         if (!req.body) return res.status(400).send({
@@ -185,7 +204,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function(err, db) {
         });
     });
 
-    function sendMail(reciever, subject, text) {
+    function sendMail(reciever, subject, text, callback) {
         var mailOptions = {
             from: '"Campus Dock" <support@mycampusdock.com>',
             to: reciever,
@@ -195,9 +214,19 @@ MongoClient.connect(url, { useNewUrlParser: true }, function(err, db) {
         smtpTransport.sendMail(mailOptions, function(error, response) {
             if (error) {
                 console.log(error);
+                return callback(error);
             } else {
                 console.log('Message sent to: ' + req.session.email);
+                return callback(null);
             }
+        });
+    }
+
+    function sendVerificationMail(reciever, pin, callback) {
+        var text = 'This is your verification PIN : ' + pin + '.\nThis PIN is valid for 2 hours only.\nNever share your PIN with anyone. If you didn\'t requested PIN, please ignore!';
+        var subject = 'Verify your E-mail | CampusDock';
+        sendMail(reciever, subject, text, function(error){
+            return callback(error);
         });
     }
 
@@ -213,22 +242,6 @@ MongoClient.connect(url, { useNewUrlParser: true }, function(err, db) {
                 });
         }
         return callback(null);
-    }
-
-    function sendVerificationMail(email, pin) {
-        var mailOptions = {
-            from: '"Campus Dock" <support@mycampusdock.com>',
-            to: email,
-            text: 'This is your verification PIN : ' + pin + '.\nThis PIN is valid for 2 hours only.\nNever share your PIN with anyone. If you didn\'t requested PIN, please ignore!',
-            subject: 'Verify your E-mail | CampusDock'
-        };
-        smtpTransport.sendMail(mailOptions, function(error, response) {
-            if (error) {
-                console.log(error);
-            } else {
-                console.log('Message sent to: ' + req.session.email);
-            }
-        });
     }
 
     function saveEventToDB(email, event_name, event_description, event_start, event_end, event_tags, event_audience, media, callback) {
@@ -248,8 +261,9 @@ MongoClient.connect(url, { useNewUrlParser: true }, function(err, db) {
         };
         dbo.collection(TABLE_EVENTS).insertOne(params, function(err, data) {
             if (err) callback(err);
-            sendMail(creator, MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + event_name + MAIL_EVENT_FOOTER);
-            callback(null);
+            sendMail(creator, MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + event_name + MAIL_EVENT_FOOTER , function(error){
+                callback(error);
+            });
         });
     }
 
