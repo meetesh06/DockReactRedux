@@ -86,7 +86,8 @@ MongoClient.connect(url, {
         const email = req.body.email;
         var pin = Math.floor(Math.random() * 1000000);
         sendVerificationMail(email, pin, function(error) {
-            if (error) return res.status(400).json({
+            console.log(error);
+            if (error) return res.status(200).json({
                 error: true,
                 mssg: error
             });
@@ -107,14 +108,14 @@ MongoClient.connect(url, {
 
     router.post('/android/signin/verify', (req, res) => {
         var token = req.headers['x-access-token'];
-        if (!token) return res.status(401).send({
+        if (!token) return res.status(200).send({
             auth: false,
             mssg: 'No token provided.'
         });
         console.log(req.body);
 
         jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
-            if (err) return res.status(500).send({
+            if (err) return res.status(200).send({
                 auth: false,
                 message: 'Not a valid token!'
             });
@@ -131,7 +132,7 @@ MongoClient.connect(url, {
                     token: JWTToken
                 });
             } else {
-                return res.status(400).json({
+                return res.status(200).json({
                     error: true,
                     mssg: 'Not valid credentials!'
                 });
