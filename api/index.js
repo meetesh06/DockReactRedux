@@ -86,7 +86,8 @@ MongoClient.connect(url, {
         const email = req.body.email;
         var pin = Math.floor(Math.random() * 1000000);
         sendVerificationMail(email, pin, function(error) {
-            if (error) res.status(400).json({
+            console.log(error);
+            if (error) return res.status(400).json({
                 error: true,
                 mssg: error
             });
@@ -102,10 +103,6 @@ MongoClient.connect(url, {
                 error: false,
                 token: JWTToken
             });
-        });
-        res.status(400).json({
-            error: true,
-            mssg: 'Something went wrong :('
         });
     });
 
