@@ -85,6 +85,7 @@ MongoClient.connect(url, {
         if (!req.body) return res.sendStatus(400);
         const email = req.body.email;
         var pin = Math.floor(Math.random() * 1000000);
+        console.log('android req');
         sendVerificationMail(email, pin, function(error) {
             console.log(error);
             if (error) return res.status(400).json({
@@ -211,10 +212,10 @@ MongoClient.connect(url, {
         smtpTransport.sendMail(mailOptions, function(error, response) {
             if (error) {
                 console.log(error);
-                return callback(error);
+                callback(error);
             } else {
                 console.log('Message sent to: ' + req.session.email);
-                return callback(null);
+                callback(null);
             }
         });
     }
@@ -223,7 +224,7 @@ MongoClient.connect(url, {
         var text = 'This is your verification PIN : ' + pin + '.\nThis PIN is valid for 2 hours only.\nNever share your PIN with anyone. If you didn\'t requested PIN, please ignore!';
         var subject = 'Verify your E-mail | CampusDock';
         sendMail(reciever, subject, text, function(error){
-            return callback(error);
+            callback(error);
         });
     }
 
