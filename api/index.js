@@ -154,8 +154,17 @@ MongoClient.connect(url, {
                 error: true,
                 mssg: error
             });
+
+            const JWTToken = jwt.sign({
+                    email: email,
+                    pin: pin
+                },
+                APP_SECRET_KEY, {
+                    expiresIn: '2h'
+                });
             return res.status(200).json({
-                error: false
+                error: false,
+                token: JWTToken
             });
         });
     });
@@ -173,6 +182,7 @@ MongoClient.connect(url, {
                 auth: false,
                 message: 'Not a valid token!'
             });
+            console.log(decoded);
             if (decoded.pin == req.body.pin && decoded.email == req.body.email) {
                 const JWTToken = jwt.sign({
                         email: req.body.email
