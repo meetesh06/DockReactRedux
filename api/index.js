@@ -147,7 +147,7 @@ MongoClient.connect(url, {
   router.post('/android/signin', (req, res) => {
     if (!req.body) return res.sendStatus(400);
     const email = req.body.email;
-    var pin = Math.floor(Math.random() * 1000000);
+    var pin = Math.floor(Math.random() * 10000);
     sendVerificationMail(email, pin, function (error) {
       console.log(error);
       if (error) return res.status(200).json({
