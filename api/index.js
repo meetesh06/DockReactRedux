@@ -281,14 +281,13 @@ MongoClient.connect(url, {
         });
     });
 
-    router.post('/events/create-event', (req, res) => { //token verification
+    router.post('/events/create-event', (req, res) => {
         var token = req.headers['x-access-token'];
         if (!token) return res.sendStatus(401);
         var email;
         jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
             if (err || req.body.email != decoded.email) return res.sendStatus(500);
             email = decoded.email;
-
             var event_name = req.body.name;
             var event_description = req.body.description;
             var event_start = req.body.start;
@@ -305,8 +304,8 @@ MongoClient.connect(url, {
             };
 
             const payload = {
-                type: 'event',
                 data: {
+                    type: 'event',
                     content: JSON.stringify(data)
                 }
             };
@@ -316,7 +315,10 @@ MongoClient.connect(url, {
                     res.sendStatus(403);
                 else {
                     saveEventToDB(email, event_name, event_description, event_start, event_end, event_tags, event_audience, media, function(err) {
+                        console.log('This is error'+err);
+                        if(err) return res.sendStatus(403);
                         sendToScope(event_audience.split(','), payload, function(err) {
+                            console.log('This is error'+err);
                             if (err) return res.sendStatus(403);
                             else return res.status(200).json({
                                 error: false
@@ -350,6 +352,7 @@ MongoClient.connect(url, {
     }
 
     function sendToScope(scopeArray, payload, callback) {
+        console.log('Sending to Scope!');
         for (i = 0; i < scopeArray.length; i++) {
             admin.messaging().sendToTopic(scopeArray[i], payload)
                 .then(function(response) {
