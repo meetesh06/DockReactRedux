@@ -12,8 +12,7 @@ server.use(express.static(path.join(__dirname, 'dock_frontend/build')));
 server.use('/', api);
 
 server.get('*', function(req, res) {
-  // res.sendFile(path.resolve(__dirname,'dock_frontend/build/index.html'));
-  res.render('index');
+  res.sendFile(path.resolve(__dirname,'dock_frontend/build/index.html'));
 });
 
 server.listen(config.port, config.host, () => console.log('API Server is live on '+config.getHost()));
