@@ -84,12 +84,12 @@ MongoClient.connect(url, {
               let loc = new Date(toSend[i].date);
               if((loc.getDate() == curr.getDate()) && (loc.getMonth() == curr.getMonth()) ) {
                 toSend[i]['reach'] = toSend[i]['reach'] + data[prop].event_reach;
-                toSend[i]['data'].push({ name: data[prop].event_name, description: data[prop].event_description, reach: data[prop].event_reach });
+                toSend[i]['data'].push({ name: data[prop].event_name, description: data[prop].event_description, reach: data[prop].event_reach, audience: data[prop].event_audience, tags: data[prop].event_tags });
                 dateExists = true;
               }
             }
             if(!dateExists) {
-              toSend.push({ date: curr, reach: data[prop].event_reach, data: [ { name: data[prop].event_name, description: data[prop].event_description, reach: data[prop].event_reach } ] });
+              toSend.push({ date: curr, reach: data[prop].event_reach, data: [ { name: data[prop].event_name, description: data[prop].event_description, reach: data[prop].event_reach, audience: data[prop].event_audience, tags: data[prop].event_tags } ] });
             }
           }
           res.status(200).json({
