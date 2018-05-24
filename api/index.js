@@ -385,7 +385,7 @@ MongoClient.connect(url, {
                 auth: false,
                 message: err
             });
-            updateEvent(event_id, function(err) {
+            updateEventReach(event_id, function(err) {
                 if (err) return res.status(200).send({
                     error: true,
                     message: err
@@ -397,7 +397,7 @@ MongoClient.connect(url, {
         });
     });
 
-    function updateEvent(event_id, callback) {
+    function updateEventReach(event_id, callback) {
         dbo.collection(TABLE_EVENTS).updateOne({
             event_id: event_id
         }, {
@@ -499,7 +499,7 @@ MongoClient.connect(url, {
 
     function UID(length) {
         var text = '';
-        var possible = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        var possible = '0123456789ABCDEFGHIJKLMNO8PQRSTUVWXYZabcd8efghijklmnopqrstuvwxyz0123456789';
 
         for (var i = 0; i < length; i++)
             text += possible.charAt(Math.floor(Math.random() * possible.length));
