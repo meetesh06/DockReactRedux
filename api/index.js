@@ -8,22 +8,22 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0;
 const admin = require('firebase-admin');
 const serviceAccount = require('./admincred.json');
 const smtpTransport = nodemailer.createTransport({
-  host: 'mail.mycampusdock.com',
-  port: 465,
-  secure: true,
-  auth: {
-    user: 'support@mycampusdock.com',
-    pass: 'D@ckD@ck'
-  }
+    host: 'mail.mycampusdock.com',
+    port: 465,
+    secure: true,
+    auth: {
+        user: 'support@mycampusdock.com',
+        pass: 'D@ckD@ck'
+    }
 });
 
 const test_bundle = {
-  hashsum: 'abcdef',
-  bundle: {
-    events: ['meeteshmehta4@gmail.com-vkakmc', 'meeteshmehta4@gmail.com-69L9Lp', 'meeteshmehta4@gmail.com-A7ZcA4'],
-    bulletins: ['bulletins1', 'bulletins2', 'bulletins3'],
-    notifications: ['noti1', 'noti2', 'noti3']
-  }
+    hashsum: 'abcdef',
+    bundle: {
+        events: ['meeteshmehta4@gmail.com-vkakmc', 'meeteshmehta4@gmail.com-69L9Lp', 'meeteshmehta4@gmail.com-A7ZcA4'],
+        bulletins: ['bulletins1', 'bulletins2', 'bulletins3'],
+        notifications: ['noti1', 'noti2', 'noti3']
+    }
 };
 
 const TABLE_USERS_ADMIN = 'users_admin';
@@ -42,407 +42,470 @@ var MongoClient = require('mongodb').MongoClient;
 var url = 'mongodb://dock:D2ckD2ck@103.227.177.152:27017/dock';
 
 MongoClient.connect(url, {
-  useNewUrlParser: true
+    useNewUrlParser: true
 }, function(err, db) {
-  if (err) throw err;
-  let dbo = db.db('dock');
-  router.use(fileUpload());
-  router.use(bodyParser.urlencoded({
-    extended: false
-  }));
-  router.use(bodyParser.json());
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    databaseURL: 'https://mycampusdock-12f5a.firebaseio.com'
-  });
-
-  router.post('/web/event-data-from-list', (req, res) => {
-    var token = req.headers['x-access-token'];
-    if (!token) return res.sendStatus(401);
-    jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
-      if (err) return res.sendStatus(401);
-      if (decoded.email == req.body.email) {
-        let event_list = req.body.event_list;
-        console.log('got event list');
-        dbo.collection(TABLE_EVENTS).find({
-          'event_id': {
-            '$in': event_list
-          }
-        }).toArray((err, data) => {
-          if (err) return res.status(200).json({
-            error: true,
-            mssg: 'Internal error occured!'
-          });
-          var toSend = [];
-          var i;
-          for (var prop in data) {
-            if(prop == 50) break;
-            var dateExists = false;
-            let curr = new Date(data[prop].event_start);
-
-            for(i=0;i<toSend.length;i++) {
-              let loc = new Date(toSend[i].date);
-              if((loc.getDate() == curr.getDate()) && (loc.getMonth() == curr.getMonth()) ) {
-                toSend[i]['reach'] = toSend[i]['reach'] + data[prop].event_reach;
-                toSend[i]['data'].push({ name: data[prop].event_name, description: data[prop].event_description, reach: data[prop].event_reach, audience: data[prop].event_audience, tags: data[prop].event_tags });
-                dateExists = true;
-              }
-            }
-            if(!dateExists) {
-              toSend.push({ date: curr, reach: data[prop].event_reach, data: [ { name: data[prop].event_name, description: data[prop].event_description, reach: data[prop].event_reach, audience: data[prop].event_audience, tags: data[prop].event_tags } ] });
-            }
-          }
-          res.status(200).json({
-            error: false,
-            data: toSend
-          });
-        });
-      } else {
-        return res.status(200).json({
-          error: true,
-          mssg: 'Not valid credentials!'
-        });
-      }
+    if (err) throw err;
+    let dbo = db.db('dock');
+    router.use(fileUpload());
+    router.use(bodyParser.urlencoded({
+        extended: false
+    }));
+    router.use(bodyParser.json());
+    admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        databaseURL: 'https://mycampusdock-12f5a.firebaseio.com'
     });
-  });
 
-  router.post('/web/bundle-check', (req, res) => {
-    var token = req.headers['x-access-token'];
-    if (!token) return res.sendStatus(401);
-    jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
-      if (err) return res.sendStatus(401);
-      if (decoded.email == req.body.email) {
-        dbo.collection(TABLE_USERS_ADMIN).findOne({
-          email: req.body.email
-        }, function(err, data) {
-          if (err) {
-            return res.sendStatus(402);
-          }
-          if (data) {
-            let toSend = {
-              hashsum: data.hashsum ? data.hashsum : '-1',
-              bundle: {
-                events: data.events ? data.events : [],
-                bulletins: data.bulletins ? data.bulletins : [],
-                notifications: data.notifications ? data.notifications : []
-              }
-            };
-            let d1 = new Date(req.body.hashsum);
-            let d2 = new Date(data.hashsum);
-            if (d1 - d2 === 0) {
-              return res.status(200).json({
-                error: false,
-                mssg: 'already up-to-date'
-              });
+    router.post('/web/event-data-from-list', (req, res) => {
+        var token = req.headers['x-access-token'];
+        if (!token) return res.sendStatus(401);
+        jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
+            if (err) return res.sendStatus(401);
+            if (decoded.email == req.body.email) {
+                let event_list = req.body.event_list;
+                console.log('got event list');
+                dbo.collection(TABLE_EVENTS).find({
+                    'event_id': {
+                        '$in': event_list
+                    }
+                }).toArray((err, data) => {
+                    if (err) return res.status(200).json({
+                        error: true,
+                        mssg: 'Internal error occured!'
+                    });
+                    var toSend = [];
+                    var i;
+                    for (var prop in data) {
+                        if (prop == 50) break;
+                        var dateExists = false;
+                        let curr = new Date(data[prop].event_start);
+
+                        for (i = 0; i < toSend.length; i++) {
+                            let loc = new Date(toSend[i].date);
+                            if ((loc.getDate() == curr.getDate()) && (loc.getMonth() == curr.getMonth())) {
+                                toSend[i]['reach'] = toSend[i]['reach'] + data[prop].event_reach;
+                                toSend[i]['data'].push({
+                                    name: data[prop].event_name,
+                                    description: data[prop].event_description,
+                                    reach: data[prop].event_reach,
+                                    audience: data[prop].event_audience,
+                                    tags: data[prop].event_tags
+                                });
+                                dateExists = true;
+                            }
+                        }
+                        if (!dateExists) {
+                            toSend.push({
+                                date: curr,
+                                reach: data[prop].event_reach,
+                                data: [{
+                                    name: data[prop].event_name,
+                                    description: data[prop].event_description,
+                                    reach: data[prop].event_reach,
+                                    audience: data[prop].event_audience,
+                                    tags: data[prop].event_tags
+                                }]
+                            });
+                        }
+                    }
+                    res.status(200).json({
+                        error: false,
+                        data: toSend
+                    });
+                });
             } else {
-              return res.status(200).json({
-                error: false,
-                mssg: 'send new data',
-                bundle: toSend
-              });
+                return res.status(200).json({
+                    error: true,
+                    mssg: 'Not valid credentials!'
+                });
             }
-          }
-        });
-      } else {
-        return res.status(200).json({
-          error: true,
-          mssg: 'Not valid credentials!'
-        });
-      }
-    });
-  });
-
-  router.post('/signin', (req, res) => {
-    if (!req.body) return res.sendStatus(400);
-    const email = req.body.email;
-    const password = req.body.password;
-    dbo.collection(TABLE_USERS_ADMIN).findOne({
-      email: email
-    }, function(err, data) {
-      if (err) {
-        return res.sendStatus(402);
-      }
-      if (data)
-        if (passwordHash.verify(password, data.password)) {
-          const JWTToken = jwt.sign({
-            email: email,
-            _id: data._id
-          },
-          APP_SECRET_KEY, {
-            expiresIn: '4d'
-          });
-          let toSend = {
-            hashsum: data.hashsum ? data.hashsum : '-1',
-            bundle: {
-              events: data.events ? data.events : [],
-              bulletins: data.bulletins ? data.bulletins : [],
-              notifications: data.notifications ? data.notifications : []
-            }
-          };
-          res.status(200).json({
-            error: false,
-            token: JWTToken,
-            bundle: toSend
-          });
-        } else {
-          return res.sendStatus(401);
-        }
-      else
-        return res.status(401).json({
-          error: true,
-          mssg: 'User does not exist!'
         });
     });
-  });
 
-  router.post('/verify', (req, res) => {
-    var token = req.headers['x-access-token'];
-    if (!token) return res.sendStatus(401);
-    jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
-      if (err) return res.sendStatus(401);
-      if (decoded.email == req.body.email) {
-        const JWTToken = jwt.sign({
-          email: req.body.email
-        },
-        APP_SECRET_KEY, {
-          expiresIn: '4d'
+    router.post('/web/bundle-check', (req, res) => {
+        var token = req.headers['x-access-token'];
+        if (!token) return res.sendStatus(401);
+        jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
+            if (err) return res.sendStatus(401);
+            if (decoded.email == req.body.email) {
+                dbo.collection(TABLE_USERS_ADMIN).findOne({
+                    email: req.body.email
+                }, function(err, data) {
+                    if (err) {
+                        return res.sendStatus(402);
+                    }
+                    if (data) {
+                        let toSend = {
+                            hashsum: data.hashsum ? data.hashsum : '-1',
+                            bundle: {
+                                events: data.events ? data.events : [],
+                                bulletins: data.bulletins ? data.bulletins : [],
+                                notifications: data.notifications ? data.notifications : []
+                            }
+                        };
+                        let d1 = new Date(req.body.hashsum);
+                        let d2 = new Date(data.hashsum);
+                        if (d1 - d2 === 0) {
+                            return res.status(200).json({
+                                error: false,
+                                mssg: 'already up-to-date'
+                            });
+                        } else {
+                            return res.status(200).json({
+                                error: false,
+                                mssg: 'send new data',
+                                bundle: toSend
+                            });
+                        }
+                    }
+                });
+            } else {
+                return res.status(200).json({
+                    error: true,
+                    mssg: 'Not valid credentials!'
+                });
+            }
         });
+    });
 
+    router.post('/signin', (req, res) => {
+        if (!req.body) return res.sendStatus(400);
+        const email = req.body.email;
+        const password = req.body.password;
         dbo.collection(TABLE_USERS_ADMIN).findOne({
-          email: req.body.email
+            email: email
         }, function(err, data) {
-          if (err) return res.sendStatus(401);
-          let toSend = {
-            hashsum: data.hashsum ? data.hashsum : '-1',
-            bundle: {
-              events: data.events ? data.events : [],
-              bulletins: data.bulletins ? data.bulletins : [],
-              notifications: data.notifications ? data.notifications : []
+            if (err) {
+                return res.sendStatus(402);
             }
-          };
-          return res.status(200).json({
-            error: false,
-            token: JWTToken,
-            bundle: toSend
-          });
+            if (data)
+                if (passwordHash.verify(password, data.password)) {
+                    const JWTToken = jwt.sign({
+                            email: email,
+                            _id: data._id
+                        },
+                        APP_SECRET_KEY, {
+                            expiresIn: '4d'
+                        });
+                    let toSend = {
+                        hashsum: data.hashsum ? data.hashsum : '-1',
+                        bundle: {
+                            events: data.events ? data.events : [],
+                            bulletins: data.bulletins ? data.bulletins : [],
+                            notifications: data.notifications ? data.notifications : []
+                        }
+                    };
+                    res.status(200).json({
+                        error: false,
+                        token: JWTToken,
+                        bundle: toSend
+                    });
+                } else {
+                    return res.sendStatus(401);
+                }
+            else
+                return res.status(401).json({
+                    error: true,
+                    mssg: 'User does not exist!'
+                });
         });
-
-      } else {
-        return res.status(200).json({
-          error: true,
-          mssg: 'Not valid credentials!'
-        });
-      }
     });
 
-  });
+    router.post('/verify', (req, res) => {
+        var token = req.headers['x-access-token'];
+        if (!token) return res.sendStatus(401);
+        jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
+            if (err) return res.sendStatus(401);
+            if (decoded.email == req.body.email) {
+                const JWTToken = jwt.sign({
+                        email: req.body.email
+                    },
+                    APP_SECRET_KEY, {
+                        expiresIn: '4d'
+                    });
 
-  router.post('/android/signin', (req, res) => {
-    if (!req.body) return res.sendStatus(400);
-    const email = req.body.email;
-    const college = req.body.college;
-    var pin = Math.floor(Math.random() * 9000) + 1000;
-    sendVerificationMail(email, pin, function(error) {
-      console.log(error);
-      if (error) return res.status(200).json({
-        error: true,
-        mssg: error
-      });
+                dbo.collection(TABLE_USERS_ADMIN).findOne({
+                    email: req.body.email
+                }, function(err, data) {
+                    if (err) return res.sendStatus(401);
+                    let toSend = {
+                        hashsum: data.hashsum ? data.hashsum : '-1',
+                        bundle: {
+                            events: data.events ? data.events : [],
+                            bulletins: data.bulletins ? data.bulletins : [],
+                            notifications: data.notifications ? data.notifications : []
+                        }
+                    };
+                    return res.status(200).json({
+                        error: false,
+                        token: JWTToken,
+                        bundle: toSend
+                    });
+                });
 
-      const JWTToken = jwt.sign({
-        email: email,
-        pin: pin,
-        college
-      },
-      APP_SECRET_KEY, {
-        expiresIn: '2h'
-      });
-      return res.status(200).json({
-        error: false,
-        token: JWTToken
-      });
-    });
-  });
-
-  router.post('/android/signin/verify', (req, res) => {
-    var token = req.headers['x-access-token'];
-    if (!token) return res.status(200).send({
-      auth: false,
-      mssg: 'No token provided.'
-    });
-    console.log(req.body);
-
-    jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
-      if (err) return res.status(200).send({
-        auth: false,
-        message: 'Not a valid token!'
-      });
-      console.log(decoded);
-      if (decoded.pin == req.body.pin && decoded.email == req.body.email) {
-        const JWTToken = jwt.sign({
-          email: req.body.email,
-          college: decoded.college
-        },
-        APP_SECRET_KEY, {
-          expiresIn: '7d'
+            } else {
+                return res.status(200).json({
+                    error: true,
+                    mssg: 'Not valid credentials!'
+                });
+            }
         });
-        return res.status(200).json({
-          error: false,
-          token: JWTToken
-        });
-      } else {
-        return res.status(200).json({
-          error: true,
-          mssg: 'Not valid credentials!'
-        });
-      }
+
     });
-  });
 
-  router.post('/events/create-event', (req, res) => {
-    var token = req.headers['x-access-token'];
-    if (!token) return res.sendStatus(401);
-    var email;
-    jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
-      if (err || req.body.email != decoded.email) return res.sendStatus(500);
-      email = decoded.email;
-      var event_name = req.body.name;
-      var event_description = req.body.description;
-      var event_start = req.body.start;
-      var event_end = req.body.end;
-      var event_tags = req.body.tags;
-      var event_audience = req.body.audience;
-      const data = {
-        event_name: event_name,
-        event_description: event_description,
-        event_start: event_start,
-        event_end: event_end,
-        event_tags: event_tags,
-        event_audience: event_audience
-      };
-
-      const payload = {
-        data: {
-          type: 'event',
-          content: JSON.stringify(data)
-        }
-      };
-
-      saveFiles(req.files, res, function(media, err) {
-        if (err)
-          res.sendStatus(403);
-        else {
-          saveEventToDB(email, event_name, event_description, event_start, event_end, event_tags, event_audience, media, function(err) {
-            console.log('This is error'+err);
-            if(err) return res.sendStatus(403);
-            sendToScope(event_audience.split(','), payload, function(err) {
-              console.log('This is error'+err);
-              if (err) return res.sendStatus(403);
-              else return res.status(200).json({
-                error: false
-              });
+    router.post('/android/signin', (req, res) => {
+        if (!req.body) return res.sendStatus(400);
+        const email = req.body.email;
+        const college = req.body.college;
+        var pin = Math.floor(Math.random() * 9000) + 1000;
+        sendVerificationMail(email, pin, function(error) {
+            console.log(error);
+            if (error) return res.status(200).json({
+                error: true,
+                mssg: error
             });
-          });
-        }
-      });
-    });
 
-  });
-
-  function mail(reciever, subject, text, callback) {
-    var mailOptions = {
-      from: '"Campus Dock" <support@mycampusdock.com>',
-      to: reciever,
-      subject: subject,
-      text: text
-    };
-    smtpTransport.sendMail(mailOptions, function(error, response) {
-      callback(error);
-    });
-  }
-
-  function sendVerificationMail(reciever, pin, callback) {
-    var text = 'This is your verification PIN : ' + pin + '.\nThis PIN is valid for 2 hours only.\nNever share your PIN with anyone. If you didn\'t requested PIN, please ignore!';
-    var subject = 'Verify your E-mail';
-    mail(reciever, subject, text, function(error) {
-      callback(error);
-    });
-  }
-
-  function sendToScope(scopeArray, payload, callback) {
-    console.log('Sending to Scope!');
-    for (i = 0; i < scopeArray.length; i++) {
-      admin.messaging().sendToTopic(scopeArray[i], payload)
-        .then(function(response) {
-          console.log(response);
-        })
-        .catch(function(error) {
-          console.log('Error sending message:', error);
-          callback(error);
+            const JWTToken = jwt.sign({
+                    email: email,
+                    pin: pin,
+                    college
+                },
+                APP_SECRET_KEY, {
+                    expiresIn: '2h'
+                });
+            return res.status(200).json({
+                error: false,
+                token: JWTToken
+            });
         });
-      if (i == scopeArray.length - 1) {
-        callback(null);
-      }
+    });
+
+    router.post('/android/signin/verify', (req, res) => {
+        var token = req.headers['x-access-token'];
+        if (!token) return res.status(200).send({
+            auth: false,
+            mssg: 'No token provided.'
+        });
+        console.log(req.body);
+
+        jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
+            if (err) return res.status(200).send({
+                auth: false,
+                message: err
+            });
+            console.log(decoded);
+            if (decoded.pin == req.body.pin && decoded.email == req.body.email) {
+                const JWTToken = jwt.sign({
+                        email: req.body.email,
+                        college: decoded.college
+                    },
+                    APP_SECRET_KEY, {
+                        expiresIn: '7d'
+                    });
+                return res.status(200).json({
+                    error: false,
+                    token: JWTToken
+                });
+            } else {
+                return res.status(200).json({
+                    error: true,
+                    mssg: 'Not valid credentials!'
+                });
+            }
+        });
+    });
+
+    router.post('/events/create-event', (req, res) => {
+        var token = req.headers['x-access-token'];
+        if (!token) return res.sendStatus(401);
+        jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
+            if (err || req.body.email != decoded.email) return res.sendStatus(500);
+            var creator = decoded.email.substring(0, decoded.email.lastIndexOf("@"));
+            var belongs_to = 'MRIIRS';
+            var event_id = creator + '-' + UID(6);
+            var event_name = req.body.name;
+            var event_description = req.body.description;
+            var event_start = req.body.start;
+            var event_end = req.body.end;
+            var event_tags = req.body.tags;
+            var event_audience = req.body.audience;
+
+            saveFiles(req.files, res, function(media, err) {
+                if (err)
+                    res.sendStatus(403);
+                else {
+                    saveEventToDB(event_id, creator, belongs_to, event_name, event_description, event_start, event_end, event_tags, event_audience, media, function(err) {
+                        console.log('This is error' + err);
+                        if (err) return res.sendStatus(403);
+                        const data = {
+                            event_id: event_id,
+                            belongs_to: belongs_to,
+                            created_by: creator,
+                            event_title: event_name,
+                            event_description: event_description,
+                            event_start: event_start,
+                            event_end: event_end,
+                            event_tags: event_tags,
+                            event_audience: event_audience,
+                            event_reach: 1,
+                            updated_on: Date.now()
+                        };
+
+                        const payload = {
+                            data: {
+                                type: 'event',
+                                content: JSON.stringify(data)
+                            }
+                        };
+                        sendToScope(event_audience.split(','), payload, function(err) {
+                            console.log('This is error' + err);
+                            if (err) return res.sendStatus(403);
+                            else return res.status(200).json({
+                                error: false
+                            });
+                        });
+                    });
+                }
+            });
+        });
+
+    });
+
+    router.post('/android/event/reach', (req, res) => {
+        var token = req.headers['x-access-token'];
+        if (!token) return res.status(200).send({
+            auth: false,
+            mssg: 'No token provided'
+        });
+
+        var event_id = req.body.event_id;
+
+        jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
+            if (err) return res.status(200).send({
+                auth: false,
+                message: err
+            });
+            updateEvent(event_id, function(err) {
+                if (err) return res.status(200).send({
+                    error: true,
+                    message: err
+                });
+                return res.status(200).send({
+                    error: false
+                })
+            });
+        });
+    });
+
+    function updateEvent(event_id, callback) {
+        dbo.collection(TABLE_EVENTS).updateOne({
+            event_id: event_id
+        }, {
+            $inc: {
+                event_reach: 1
+            }
+        }, function(err, data) {
+            if (err) {
+                callback(err);
+            } else {
+                callback(null);
+            }
+        });
     }
-  }
 
-  function saveEventToDB(email, event_name, event_description, event_start, event_end, event_tags, event_audience, media, callback) {
-    var creator = email;
-    var event_id = creator + '-' + UID(6);
-    var params = {
-      event_id: event_id,
-      creator_name: creator,
-      event_name: event_name,
-      event_description: event_description,
-      event_audience: event_audience,
-      event_media: media,
-      event_start: event_start,
-      event_end: event_end,
-      event_tags: event_tags,
-      event_reach: 1
-    };
-    dbo.collection(TABLE_EVENTS).insertOne(params, function(err, data) {
-      if (err) callback(err);
-      mail(creator, MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + event_name + MAIL_EVENT_FOOTER, function(error) {
-        callback(error);
-      });
-    });
-    dbo.collection(TABLE_USERS_ADMIN).update({
-      email: creator
-    }, {
-      $push: {
-        events: event_id
-      },
-      $set: {
-        hashsum: new Date()
-      }
-    }, function(err, result) {
-      console.log(err, result);
-    });
-  }
+    function mail(reciever, subject, text, callback) {
+        var mailOptions = {
+            from: '"Campus Dock" <support@mycampusdock.com>',
+            to: reciever,
+            subject: subject,
+            text: text
+        };
+        smtpTransport.sendMail(mailOptions, function(error, response) {
+            callback(error);
+        });
+    }
 
-  function saveFiles(files, res, callback) {
-    var media = [];
-    Object.entries(files).forEach(([key, value]) => {
-      var filename = random() + '-' + value.name;
-      var loc = __dirname + '/events/media/' + filename;
-      media.push(loc);
-      value.mv(loc, function(err) {
-        if (err) callback(null, err);
-      });
-    });
-    callback(media, null);
-  }
+    function sendVerificationMail(reciever, pin, callback) {
+        var text = 'This is your verification PIN : ' + pin + '.\nThis PIN is valid for 2 hours only.\nNever share your PIN with anyone. If you didn\'t requested PIN, please ignore!';
+        var subject = 'Verify your E-mail';
+        mail(reciever, subject, text, function(error) {
+            callback(error);
+        });
+    }
 
-  function UID(length) {
-    var text = '';
-    var possible = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    function sendToScope(scopeArray, payload, callback) {
+        console.log('Sending to Scope!');
+        for (i = 0; i < scopeArray.length; i++) {
+            admin.messaging().sendToTopic(scopeArray[i], payload)
+                .then(function(response) {
+                    console.log(response);
+                })
+                .catch(function(error) {
+                    console.log('Error sending message:', error);
+                    callback(error);
+                });
+            if (i == scopeArray.length - 1) {
+                callback(null);
+            }
+        }
+    }
 
-    for (var i = 0; i < length; i++)
-      text += possible.charAt(Math.floor(Math.random() * possible.length));
+    function saveEventToDB(event_id, creator, belongs_to, event_name, event_description, event_start, event_end, event_tags, event_audience, media, callback) {
+        var params = {
+            event_id: event_id,
+            belongs_to: belongs_to,
+            creator_name: creator,
+            event_name: event_name,
+            event_description: event_description,
+            event_audience: event_audience,
+            event_media: media,
+            event_start: event_start,
+            event_end: event_end,
+            event_tags: event_tags,
+            event_reach: 1
+        };
+        dbo.collection(TABLE_EVENTS).insertOne(params, function(err, data) {
+            if (err) callback(err);
+            mail(creator, MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + event_name + MAIL_EVENT_FOOTER, function(error) {
+                callback(error);
+            });
+        });
+        dbo.collection(TABLE_USERS_ADMIN).update({
+            email: creator
+        }, {
+            $push: {
+                events: event_id
+            },
+            $set: {
+                hashsum: random()
+            }
+        }, function(err, result) {
+            console.log(err, result);
+        });
+    }
 
-    return text;
-  }
+    function saveFiles(files, res, callback) {
+        var media = [];
+        Object.entries(files).forEach(([key, value]) => {
+            var filename = random() + '-' + value.name;
+            var loc = __dirname + '/events/media/' + filename;
+            media.push(loc);
+            value.mv(loc, function(err) {
+                if (err) callback(null, err);
+            });
+        });
+        callback(media, null);
+    }
+
+    function UID(length) {
+        var text = '';
+        var possible = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+
+        for (var i = 0; i < length; i++)
+            text += possible.charAt(Math.floor(Math.random() * possible.length));
+
+        return text;
+    }
 });
 
 module.exports = router;
