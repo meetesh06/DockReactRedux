@@ -76,6 +76,7 @@ MongoClient.connect(url, {
                     var toSend = [];
                     var i;
                     for (var prop in data) {
+                        console.log(data[prop]);
                         if (prop == 50) break;
                         var dateExists = false;
                         let curr = new Date(data[prop].event_start);
@@ -89,7 +90,8 @@ MongoClient.connect(url, {
                                     description: data[prop].event_description,
                                     reach: data[prop].event_reach,
                                     audience: data[prop].event_audience,
-                                    tags: data[prop].event_tags
+                                    tags: data[prop].event_tags,
+                                    media: data[prop].event_media
                                 });
                                 dateExists = true;
                             }
@@ -103,7 +105,8 @@ MongoClient.connect(url, {
                                     description: data[prop].event_description,
                                     reach: data[prop].event_reach,
                                     audience: data[prop].event_audience,
-                                    tags: data[prop].event_tags
+                                    tags: data[prop].event_tags,
+                                    media: data[prop].event_media
                                 }]
                             });
                         }
@@ -321,6 +324,7 @@ MongoClient.connect(url, {
         jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
             if (err || req.body.email != decoded.email) return res.sendStatus(500);
             var creator = decoded.email.substring(0, decoded.email.lastIndexOf("@"));
+            var creatorEmail = decoded.email;
             var belongs_to = 'MRIIRS';
             var event_id = creator + '-' + UID(6);
             var event_name = req.body.name;
@@ -334,8 +338,7 @@ MongoClient.connect(url, {
                 if (err)
                     res.sendStatus(403);
                 else {
-                    saveEventToDB(event_id, creator, belongs_to, event_name, event_description, event_start, event_end, event_tags, event_audience, media, function(err) {
-                        console.log('This is error' + err);
+                    saveEventToDB(event_id, creator, creatorEmail, belongs_to, event_name, event_description, event_start, event_end, event_tags, event_audience, media, function(err) {
                         if (err) return res.sendStatus(403);
                         const data = {
                             event_id: event_id,
@@ -358,7 +361,6 @@ MongoClient.connect(url, {
                             }
                         };
                         sendToScope(event_audience.split(','), payload, function(err) {
-                            console.log('This is error' + err);
                             if (err) return res.sendStatus(403);
                             else return res.status(200).json({
                                 error: false
@@ -450,7 +452,7 @@ MongoClient.connect(url, {
         }
     }
 
-    function saveEventToDB(event_id, creator, belongs_to, event_name, event_description, event_start, event_end, event_tags, event_audience, media, callback) {
+    function saveEventToDB(event_id, creator, creatorEmail, belongs_to, event_name, event_description, event_start, event_end, event_tags, event_audience, media, callback) {
         var params = {
             event_id: event_id,
             belongs_to: belongs_to,
@@ -465,13 +467,15 @@ MongoClient.connect(url, {
             event_reach: 1
         };
         dbo.collection(TABLE_EVENTS).insertOne(params, function(err, data) {
-            if (err) callback(err);
-            mail(creator, MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + event_name + MAIL_EVENT_FOOTER, function(error) {
+            if (err) {
+                callback(err)
+            };
+            mail(creatorEmail, MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + event_name + MAIL_EVENT_FOOTER, function(error) {
                 callback(error);
             });
         });
         dbo.collection(TABLE_USERS_ADMIN).update({
-            email: creator
+            email: creatorEmail
         }, {
             $push: {
                 events: event_id
@@ -480,7 +484,7 @@ MongoClient.connect(url, {
                 hashsum: random()
             }
         }, function(err, result) {
-            console.log(err, result);
+            callback(err);
         });
     }
 
@@ -489,7 +493,7 @@ MongoClient.connect(url, {
         Object.entries(files).forEach(([key, value]) => {
             var filename = random() + '-' + value.name;
             var loc = __dirname + '/events/media/' + filename;
-            media.push(loc);
+            media.push(filename);
             value.mv(loc, function(err) {
                 if (err) callback(null, err);
             });
