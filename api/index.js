@@ -74,6 +74,13 @@ MongoClient.connect(url, {
     } 
   });
 
+  function checkUserExists( email, callback ) {
+    dbo.collection(TABLE_USERS).findOne( { email }, (err, result) => {
+      if (err) callback(err, null);
+      callback(null, result);
+    });
+  }
+
   router.post('/web/event-data-from-list', (req, res) => {
     var token = req.headers['x-access-token'];
     if (!token) return res.sendStatus(401);
@@ -316,17 +323,28 @@ MongoClient.connect(url, {
       });
       console.log(decoded);
       if (decoded.pin == req.body.pin && decoded.email == req.body.email) {
-        const JWTToken = jwt.sign({
-          email: req.body.email,
-          college: decoded.college
-        },
-        APP_SECRET_KEY, {
-          expiresIn: '7d'
+        checkUserExists( decoded.email, (err, data) => {
+          if(!err) {
+            const JWTToken = jwt.sign({
+              email: req.body.email,
+              college: decoded.college
+            },
+            APP_SECRET_KEY, {
+              expiresIn: '7d'
+            });
+            return res.status(200).json({
+              error: false,
+              token: JWTToken,
+              data
+            });
+          } else {
+            return res.status(200).json({
+              error: true,
+              mssg: err
+            });
+          }
         });
-        return res.status(200).json({
-          error: false,
-          token: JWTToken
-        });
+        
       } else {
         return res.status(200).json({
           error: true,
