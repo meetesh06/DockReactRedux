@@ -563,6 +563,7 @@ MongoClient.connect(url, {
               bulletin_id: bulletin_id,
               belongs_to: belongs_to,
               creator_name: creator,
+              creator_email: creatorEmail,
               bulletin_title: bulletin_name,
               bulletin_description: bulletin_description,
               bulletin_audience: bulletin_audience,
@@ -621,7 +622,79 @@ MongoClient.connect(url, {
       });
     });
   }
-  
+
+  router.post('/notifications/create-notification', (req, res) => {
+    console.log('create notification request');
+    var token = req.headers['x-access-token'];
+    if (!token) return res.sendStatus(401);
+    jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
+      if (err || req.body.email != decoded.email) return res.sendStatus(500);
+      var creator = decoded.email.substring(0, decoded.email.lastIndexOf('@'));
+      var creatorEmail = decoded.email;
+      var belongs_to = 'MRIIRS';
+      var notification_id = creator + '-' + UID(6);
+      var notification_description = req.body.description;
+      var notification_audience = req.body.audience;
+
+      saveNotificationToDB(notification_id, creator, creatorEmail, belongs_to, notification_description, notification_audience, function(err) {
+        if (err) return res.sendStatus(403);
+        const data = {
+          notification_id: notification_id,
+          belongs_to: belongs_to,
+          creator_name: creator,
+          notification_description: notification_description,
+          notification_audience: notification_audience,
+          notification_reach: 1
+        };
+
+        const payload = {
+          data: {
+            type: 'notification',
+            content: JSON.stringify(data)
+          }
+        };
+        sendToScope(notification_audience.split(','), payload, function(err) {
+          if (err) return res.sendStatus(403);
+          else return res.status(200).json({
+            error: false
+          });
+        });
+      });
+    });
+
+  });
+
+  function saveNotificationToDB(notification_id, creator, creatorEmail, belongs_to, notification_description, notification_audience, callback) {
+    var params = {
+      notification_id: notification_id,
+      belongs_to: belongs_to,
+      creator: creator,
+      creator_email: creatorEmail,
+      notification_description: notification_description,
+      notification_audience: notification_audience,
+      notification_reach: 1      
+    };
+    dbo.collection(TABLE_NOTIFICATIONS).insertOne(params, function(err, data) {
+      if (err) {
+        return callback(err);
+      }
+      dbo.collection(TABLE_USERS_ADMIN).update({
+        email: creatorEmail
+      }, {
+        $push: {
+          notifications: notification_id
+        },
+        $set: {
+          hashsum: random()
+        }
+      }, function(err, result) {
+        if (err) return callback(err);
+        mail(creatorEmail, MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + notification_description + MAIL_EVENT_FOOTER, function(error) {
+          return callback(error);
+        });
+      });
+    });
+  }
   router.post('/android/event/check-enrolled', (req, res) => {
     var token = req.headers['x-access-token'];
     if (!token) return res.status(200).send({
@@ -865,6 +938,7 @@ MongoClient.connect(url, {
       event_id: event_id,
       belongs_to: belongs_to,
       creator_name: creator,
+      creator_email: creatorEmail,
       event_name: event_name,
       event_description: event_description,
       event_audience: event_audience,
