@@ -570,10 +570,11 @@ MongoClient.connect(url, {
 
             const payload = {
               data: {
-                type: 'event',
+                type: 'bulletin',
                 content: JSON.stringify(data)
               }
             };
+            console.log(bulletin_audience.split(','));
             sendToScope(bulletin_audience.split(','), payload, function(err) {
               if (err) return res.sendStatus(403);
               else return res.status(200).json({
@@ -600,27 +601,25 @@ MongoClient.connect(url, {
     };
     dbo.collection(TABLE_BULLETINS).insertOne(params, function(err, data) {
       if (err) {
-        callback(err);
+        return callback(err);
       }
-      mail(creatorEmail, MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + bulletin_name + MAIL_EVENT_FOOTER, function(error) {
-        callback(error);
+      dbo.collection(TABLE_USERS_ADMIN).update({
+        email: creatorEmail
+      }, {
+        $push: {
+          bulletins: bulletin_id
+        },
+        $set: {
+          hashsum: random()
+        }
+      }, function(err, result) {
+        if (err) return callback(err);
+        mail(creatorEmail, MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + bulletin_name + MAIL_EVENT_FOOTER, function(error) {
+          return callback(error);
+        });
       });
     });
-    dbo.collection(TABLE_USERS_ADMIN).update({
-      email: creatorEmail
-    }, {
-      $push: {
-        bulletins: bulletin_id
-      },
-      $set: {
-        hashsum: random()
-      }
-    }, function(err, result) {
-      callback(err);
-    });
   }
-
-
 
   router.post('/android/event/reach', (req, res) => {
     var token = req.headers['x-access-token'];
@@ -718,23 +717,23 @@ MongoClient.connect(url, {
     };
     dbo.collection(TABLE_EVENTS).insertOne(params, function(err, data) {
       if (err) {
-        callback(err);
+        return callback(err);
       }
-      mail(creatorEmail, MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + event_name + MAIL_EVENT_FOOTER, function(error) {
-        callback(error);
+      dbo.collection(TABLE_USERS_ADMIN).update({
+        email: creatorEmail
+      }, {
+        $push: {
+          events: event_id
+        },
+        $set: {
+          hashsum: random()
+        }
+      }, function(err, result) {
+        if(err) return callback(err);
+        mail(creatorEmail, MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + event_name + MAIL_EVENT_FOOTER, function(error) {
+          callback(error);
+        });
       });
-    });
-    dbo.collection(TABLE_USERS_ADMIN).update({
-      email: creatorEmail
-    }, {
-      $push: {
-        events: event_id
-      },
-      $set: {
-        hashsum: random()
-      }
-    }, function(err, result) {
-      callback(err);
     });
   }
 
