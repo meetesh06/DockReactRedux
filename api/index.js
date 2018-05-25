@@ -30,6 +30,7 @@ const TABLE_USERS_ADMIN = 'users_admin';
 const TABLE_USERS = 'users';
 const TABLE_COLLEGES = 'colleges';
 const TABLE_EVENTS = 'events';
+const TABLE_BULLETINS = 'bulletins';
 const jwt = require('jsonwebtoken');
 const random = require('hat');
 const APP_SECRET_KEY = 'IaMnOtMeDiOcRe';
@@ -340,7 +341,7 @@ MongoClient.connect(url, {
             return res.status(200).json({
               error: false,
               token: JWTToken,
-              data
+              data: data ? data : {}
             });
           } else {
             return res.status(200).json({
@@ -536,6 +537,90 @@ MongoClient.connect(url, {
       }
     });
   }
+
+  router.post('/bulletins/create-bulletin', (req, res) => {
+    console.log('create bulletin request');
+    var token = req.headers['x-access-token'];
+    if (!token) return res.sendStatus(401);
+    jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
+      if (err || req.body.email != decoded.email) return res.sendStatus(500);
+      var creator = decoded.email.substring(0, decoded.email.lastIndexOf('@'));
+      var creatorEmail = decoded.email;
+      var belongs_to = 'MRIIRS';
+      var bulletin_id = creator + '-' + UID(6);
+      var bulletin_name = req.body.name;
+      var bulletin_description = req.body.description;
+      var bulletin_audience = req.body.audience;
+
+      saveFiles(req.files ? req.files : [] , res, function(media, err) {
+        if (err)
+          res.sendStatus(403);
+        else {
+          saveBulletinToDB(bulletin_id, creator, creatorEmail, belongs_to, bulletin_name, bulletin_description, bulletin_audience, media, function(err) {
+            if (err) return res.sendStatus(403);
+            const data = {
+              bulletin_id: bulletin_id,
+              belongs_to: belongs_to,
+              creator_name: creator,
+              bulletin_title: bulletin_name,
+              bulletin_description: bulletin_description,
+              bulletin_audience: bulletin_audience,
+              bulletin_reach: 1
+            };
+
+            const payload = {
+              data: {
+                type: 'event',
+                content: JSON.stringify(data)
+              }
+            };
+            sendToScope(bulletin_audience.split(','), payload, function(err) {
+              if (err) return res.sendStatus(403);
+              else return res.status(200).json({
+                error: false
+              });
+            });
+          });
+        }
+      });
+    });
+
+  });
+
+  function saveBulletinToDB(bulletin_id, creator, creatorEmail, belongs_to, bulletin_name, bulletin_description, bulletin_audience, media, callback) {
+    var params = {
+      bulletin_id: bulletin_id,
+      belongs_to: belongs_to,
+      creator: creator,
+      bulletin_title: bulletin_name,
+      bulletin_description: bulletin_description,
+      bulletin_audience: bulletin_audience,
+      bulletin_media: media,
+      bulletin_reach: 1      
+    };
+    dbo.collection(TABLE_BULLETINS).insertOne(params, function(err, data) {
+      if (err) {
+        callback(err);
+      }
+      mail(creatorEmail, MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + bulletin_name + MAIL_EVENT_FOOTER, function(error) {
+        callback(error);
+      });
+    });
+    dbo.collection(TABLE_USERS_ADMIN).update({
+      email: creatorEmail
+    }, {
+      $push: {
+        bulletins: bulletin_id
+      },
+      $set: {
+        hashsum: random()
+      }
+    }, function(err, result) {
+      callback(err);
+    });
+  }
+
+
 
   router.post('/android/event/reach', (req, res) => {
     var token = req.headers['x-access-token'];
