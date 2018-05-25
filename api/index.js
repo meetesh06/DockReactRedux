@@ -31,6 +31,7 @@ const TABLE_USERS = 'users';
 const TABLE_COLLEGES = 'colleges';
 const TABLE_EVENTS = 'events';
 const TABLE_BULLETINS = 'bulletins';
+const TABLE_NOTIFICATIONS = 'notifications';
 const jwt = require('jsonwebtoken');
 const random = require('hat');
 const APP_SECRET_KEY = 'IaMnOtMeDiOcRe';
@@ -620,30 +621,157 @@ MongoClient.connect(url, {
       });
     });
   }
-
-  router.post('/android/event/reach', (req, res) => {
+  
+  router.post('/android/event/check-enrolled', (req, res) => {
     var token = req.headers['x-access-token'];
     if (!token) return res.status(200).send({
       auth: false,
       mssg: 'No token provided'
     });
-
-    var event_id = req.body.event_id;
-
     jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
       if (err) return res.status(200).send({
         auth: false,
         message: err
       });
-      updateEventReach(event_id, function(err) {
+      let event_id = req.body.event_id;
+      let roll_no = req.body.roll_no;
+      dbo.collection(TABLE_EVENTS).findOne({ event_id: event_id, 'event_enrollees.user_roll': roll_no }, (err, result) => {
         if (err) return res.status(200).send({
           error: true,
           message: err
         });
-        return res.status(200).send({
-          error: false
-        });
+        if(result) {
+          return res.status(200).send({
+            error: false,
+            data: true
+          });
+        } else {
+          return res.status(200).send({
+            error: false,
+            data: false
+          });
+        }
       });
+    });
+  });
+
+  router.post('/android/update-user-data' , (req, res) => {
+    var token = req.headers['x-access-token'];
+    if (!token) return res.status(200).send({
+      auth: false,
+      mssg: 'No token provided'
+    });
+    jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
+      if (err) return res.status(200).send({
+        auth: false,
+        message: err
+      });
+      let roll_no = req.body.roll_no;
+      let username = req.body.username;
+      let email = req.body.email;
+      let scope = req.body.scope;
+      let college = req.body.college;
+
+      dbo.collection(TABLE_USERS).replaceOne({
+        roll_no: roll_no
+      },{
+        roll_no,
+        username,
+        email,
+        scope,
+        college
+      },
+      { upsert: true }
+        , function(err, data) {
+        if (err) {
+          return res.status(200).send({
+            error: true,
+            mssg: err
+          });
+        } else {
+          return res.status(200).send({
+            error: false,
+            mssg: 'updated'
+          });
+        }
+      });
+
+    });
+  });
+
+  router.post('/android/reach', (req, res) => {
+    var token = req.headers['x-access-token'];
+    if (!token) return res.status(200).send({
+      auth: false,
+      mssg: 'No token provided'
+    });
+    jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
+      if (err) return res.status(200).send({
+        auth: false,
+        message: err
+      });
+      var type = req.body.type;
+      switch (type) {
+      case 101:
+        var event_id = req.body.event_id;
+        if(event_id) {
+          updateEventReach(event_id, function(err) {
+            if (err) return res.status(200).send({
+              error: true,
+              message: err
+            });
+            return res.status(200).send({
+              error: false
+            });
+          });
+        } else {
+          return res.status(200).send({
+            error: true,
+            message: 'event id not specified'
+          });
+        }
+        break;
+      case 102:
+        var bulletin_id = req.body.bulletin_id;
+        if(bulletin_id) {
+          updateBulletinReach(bulletin_id, function(err) {
+            if (err) return res.status(200).send({
+              error: true,
+              message: err
+            });
+            return res.status(200).send({
+              error: false
+            });
+          });
+        } else {
+          return res.status(200).send({
+            error: true,
+            message: 'bulletin id not specified'
+          });
+        }
+        break;
+      case 103:
+        var notification_id = req.body.notification_id;
+        if(notification_id) {
+          updateNotificationReach(notification_id, function(err) {
+            if (err) return res.status(200).send({
+              error: true,
+              message: err
+            });
+            return res.status(200).send({
+              error: false
+            });
+          });
+        } else {
+          return res.status(200).send({
+            error: true,
+            message: 'notification id not specified'
+          });
+        }
+        break;
+      default:
+      }
+
     });
   });
 
@@ -662,6 +790,37 @@ MongoClient.connect(url, {
       }
     });
   }
+  function updateBulletinReach(bulletin_id, callback) {
+    dbo.collection(TABLE_BULLETINS).updateOne({
+      bulletin_id: bulletin_id
+    }, {
+      $inc: {
+        bulletin_reach: 1
+      }
+    }, function(err, data) {
+      if (err) {
+        callback(err);
+      } else {
+        callback(null);
+      }
+    });
+  }
+  function updateNotificationReach(notification_id, callback) {
+    dbo.collection(TABLE_NOTIFICATIONS).updateOne({
+      notification_id: notification_id
+    }, {
+      $inc: {
+        notification_reach: 1
+      }
+    }, function(err, data) {
+      if (err) {
+        callback(err);
+      } else {
+        callback(null);
+      }
+    });
+  }
+  
 
   function mail(reciever, subject, text, callback) {
     var mailOptions = {
