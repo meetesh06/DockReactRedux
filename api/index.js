@@ -81,6 +81,7 @@ MongoClient.connect(url, {
     });
   }
 
+
   router.post('/web/event-data-from-list', (req, res) => {
     var token = req.headers['x-access-token'];
     if (!token) return res.sendStatus(401);
@@ -116,7 +117,8 @@ MongoClient.connect(url, {
                   reach: data[prop].event_reach,
                   audience: data[prop].event_audience,
                   tags: data[prop].event_tags,
-                  media: data[prop].event_media
+                  media: data[prop].event_media,
+                  id: data[prop].event_id
                 });
                 dateExists = true;
               }
@@ -131,7 +133,8 @@ MongoClient.connect(url, {
                   reach: data[prop].event_reach,
                   audience: data[prop].event_audience,
                   tags: data[prop].event_tags,
-                  media: data[prop].event_media
+                  media: data[prop].event_media,
+                  id: data[prop].event_id
                 }]
               });
             }
@@ -307,6 +310,8 @@ MongoClient.connect(url, {
       });
     });
   });
+  
+  
 
   router.post('/android/signin/verify', (req, res) => {
     var token = req.headers['x-access-token'];
@@ -408,6 +413,129 @@ MongoClient.connect(url, {
     });
 
   });
+
+  router.post('/events/update-event', (req, res) => {
+    var token = req.headers['x-access-token'];
+    if (!token) return res.sendStatus(401);
+    jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
+      if (err || req.body.email != decoded.email) return res.send({
+        error: true,
+        mssg: 'invalid email',
+        reload: true
+      });
+      var event_description = req.body.description;
+      var event_id = req.body.id;
+      var event_audience = req.body.audience;
+      if( !event_description || !event_description || !event_audience ) return res.send({
+        error: true,
+        mssg: 'invalid details',
+        reload: false
+      });
+
+      updateEventDB(event_id, event_description, event_audience, function(err) {
+        if (err) {
+          return res.send({
+            error: true,
+            mssg: 'error saving changes',
+            reload: false
+          });
+        } else {
+          const data = {
+            event_id: event_id,
+            event_description: event_description
+          };
+  
+          const payload = {
+            data: {
+              type: 'event_update',
+              content: JSON.stringify(data)
+            }
+          };
+          sendToScope(event_audience.split(','), payload, function(err) {
+            if (err) {
+              return res.send({
+                error: true,
+                mssg: 'error saving changes',
+                reload: false
+              }
+              );
+            } else {
+              return res.send({
+                error: false,
+                mssg: 'success',
+                reload: false
+              });
+            }
+          });
+        }
+      });
+      
+    });
+  });
+
+  function updateEventDB( event_id, event_description, event_audience, callback ) {    
+    dbo.collection(TABLE_EVENTS).updateOne({
+      event_id: event_id
+    }, {
+      $set: {
+        event_description
+      }
+    }, function(err, data) {
+      if (err) {
+        callback(err);
+      } else {
+        callback(null);
+      }
+    });
+  }
+
+  router.post('/android/event/enroll', (req, res) => {
+    var token = req.headers['x-access-token'];
+    if (!token) return res.status(200).send({
+      auth: false,
+      mssg: 'No token provided'
+    });
+    var event_id = req.body.event_id;
+    var user_email = req.body.email;
+    var user_roll = req.body.roll_no;
+
+    if ( !event_id || !user_email || !user_roll ) return res.status(200).send({
+      error: true,
+      message: 'invalid details'
+    });
+
+    jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
+      if (err) return res.status(200).send({
+        auth: false,
+        message: err
+      });
+      enrollEventDB(event_id, { user_email, user_roll }  , function(err) {
+        if (err) return res.status(200).send({
+          error: true,
+          message: err
+        });
+        return res.status(200).send({
+          error: false
+        });
+      });
+    });
+  });
+
+  function enrollEventDB( event_id, user, callback ) {    
+    dbo.collection(TABLE_EVENTS).updateOne({
+      event_id: event_id
+    }, {
+      $addToSet: {
+        event_enrollees: user
+      }
+    }, function(err, data) {
+      if (err) {
+        callback(err);
+      } else {
+        callback(null);
+      }
+    });
+  }
 
   router.post('/android/event/reach', (req, res) => {
     var token = req.headers['x-access-token'];
