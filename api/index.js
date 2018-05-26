@@ -375,6 +375,24 @@ MongoClient.connect(url, {
     });
   });
 
+  router.post('/verify-chat', (req, res) => {
+    var token = req.headers['x-access-token'];
+    if (!token) return res.json({
+      error: true,
+      mssg: 'invalid token'
+    });
+    jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
+      if (err) return res.json({
+        error: true,
+        mssg: 'invalid token'
+      });
+      else return res.json({
+        error: false,
+        data: decoded.email
+      }); 
+    });
+  });
+
   router.post('/verify', (req, res) => {
     var token = req.headers['x-access-token'];
     if (!token) return res.sendStatus(401);
