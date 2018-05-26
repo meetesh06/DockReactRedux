@@ -41,6 +41,7 @@ const MAIL_EVENT_TEXT = 'You have successfully created a new Event.\n';
 const MAIL_EVENT_DEATILS_TITLE = 'Event Title: ';
 const MAIL_EVENT_FOOTER = '\nYou can check the event details on Web Portal.\nFor any technical issue, feel free to write at help@mycampusdock.com.';
 
+const ObjectID = require('mongodb').ObjectID;
 var MongoClient = require('mongodb').MongoClient;
 var url = 'mongodb://dock:D2ckD2ck@103.227.177.152:27017/dock';
 
@@ -104,7 +105,6 @@ MongoClient.connect(url, {
           var toSend = [];
           var i;
           for (var prop in data) {
-            console.log(data[prop]);
             if (prop == 50) break;
             var dateExists = false;
             let curr = new Date(data[prop].event_start);
@@ -155,6 +155,139 @@ MongoClient.connect(url, {
     });
   });
 
+  router.post('/web/bulletin-data-from-list', (req, res) => {
+    var token = req.headers['x-access-token'];
+    if (!token) return res.sendStatus(401);
+    jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
+      if (err) return res.sendStatus(401);
+      if (decoded.email == req.body.email) {
+        let bulletin_list = req.body.bulletin_list;
+        console.log('got bulletin list');
+        dbo.collection(TABLE_BULLETINS).find({
+          'bulletin_id': {
+            '$in': bulletin_list
+          }
+        }).toArray((err, data) => {
+          if (err) return res.status(200).json({
+            error: true,
+            mssg: 'Internal error occured!'
+          });
+          var toSend = [];
+          var i;
+          
+          for (var prop in data) {
+            if (prop == 50) break;
+            var dateExists = false;
+            let curr = new Date(new ObjectID(data[prop]._id).getTimestamp());
+            for (i = 0; i < toSend.length; i++) {
+              let loc = new Date(toSend[i].date);
+              if ((loc.getDate() == curr.getDate()) && (loc.getMonth() == curr.getMonth())) {
+                toSend[i]['reach'] = toSend[i]['reach'] + data[prop].bulletin_reach;
+                toSend[i]['data'].push({
+                  name: data[prop].bulletin_title,
+                  description: data[prop].bulletin_description,
+                  reach: data[prop].bulletin_reach,
+                  audience: data[prop].bulletin_audience,
+                  media: data[prop].event_media,
+                  id: data[prop].bulletin_id
+                });
+                dateExists = true;
+              }
+            }
+            if (!dateExists) {
+              toSend.push({
+                date: curr,
+                reach: data[prop].event_reach,
+                data: [{
+                  name: data[prop].bulletin_title,
+                  description: data[prop].bulletin_description,
+                  reach: data[prop].bulletin_reach,
+                  audience: data[prop].bulletin_audience,
+                  media: data[prop].event_media,
+                  id: data[prop].bulletin_id
+                }]
+              });
+            }
+          }
+          res.status(200).json({
+            error: false,
+            data: toSend
+          });
+        });
+      } else {
+        return res.status(200).json({
+          error: true,
+          mssg: 'Not valid credentials!'
+        });
+      }
+    });
+  });
+  router.post('/web/notification-data-from-list', (req, res) => {
+    var token = req.headers['x-access-token'];
+    if (!token) return res.sendStatus(401);
+    jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
+      if (err) return res.sendStatus(401);
+      if (decoded.email == req.body.email) {
+        let notification_list = req.body.notification_list;
+        console.log('got notification list');
+        dbo.collection(TABLE_NOTIFICATIONS).find({
+          'notification_id': {
+            '$in': notification_list
+          }
+        }).toArray((err, data) => {
+          if (err) return res.status(200).json({
+            error: true,
+            mssg: 'Internal error occured!'
+          });
+          var toSend = [];
+          var i;
+          for (var prop in data) {
+            if (prop == 50) break;
+            var dateExists = false;
+            let curr = new Date(new ObjectID(data[prop]._id).getTimestamp());
+            
+            for (i = 0; i < toSend.length; i++) {
+              let loc = new Date(toSend[i].date);
+              if ((loc.getDate() == curr.getDate()) && (loc.getMonth() == curr.getMonth())) {
+                toSend[i]['reach'] = toSend[i]['reach'] + data[prop].notification_reach;
+                toSend[i]['data'].push({
+                  description: data[prop].notification_description,
+                  reach: data[prop].notification_reach,
+                  audience: data[prop].notification_audience,
+                  id: data[prop].notification_id,
+                  name: 'created: ' + curr.getHours() + ':' + curr.getMinutes()
+                });
+                dateExists = true;
+              }
+            }
+            if (!dateExists) {
+              toSend.push({
+                date: curr,
+                reach: data[prop].event_reach,
+                data: [{
+                  description: data[prop].notification_description,
+                  reach: data[prop].notification_reach,
+                  audience: data[prop].notification_audience,
+                  id: data[prop].notification_id,
+                  name: 'created: ' + curr.getHours() + ':' + curr.getMinutes()
+                }]
+              });
+            }
+          }
+          res.status(200).json({
+            error: false,
+            data: toSend
+          });
+        });
+      } else {
+        return res.status(200).json({
+          error: true,
+          mssg: 'Not valid credentials!'
+        });
+      }
+    });
+  });
+
   router.post('/web/bundle-check', (req, res) => {
     var token = req.headers['x-access-token'];
     if (!token) return res.sendStatus(401);
@@ -176,9 +309,7 @@ MongoClient.connect(url, {
                 notifications: data.notifications ? data.notifications : []
               }
             };
-            let d1 = new Date(req.body.hashsum);
-            let d2 = new Date(data.hashsum);
-            if (d1 - d2 === 0) {
+            if (data.hashsum === req.body.hashsum) {
               return res.status(200).json({
                 error: false,
                 mssg: 'already up-to-date'
@@ -599,7 +730,8 @@ MongoClient.connect(url, {
       bulletin_description: bulletin_description,
       bulletin_audience: bulletin_audience,
       bulletin_media: media,
-      bulletin_reach: 1      
+      bulletin_reach: 1,
+      bulletin_created: new Date()       
     };
     dbo.collection(TABLE_BULLETINS).insertOne(params, function(err, data) {
       if (err) {
