@@ -23,6 +23,7 @@ const TABLE_COLLEGES = 'colleges';
 const TABLE_EVENTS = 'events';
 const TABLE_BULLETINS = 'bulletins';
 const TABLE_NOTIFICATIONS = 'notifications';
+const TABLE_SCOPE = 'scopes';
 const jwt = require('jsonwebtoken');
 const random = require('hat');
 const APP_SECRET_KEY = 'IaMnOtMeDiOcRe';
@@ -49,6 +50,164 @@ MongoClient.connect(url, {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
     databaseURL: 'https://mycampusdock-12f5a.firebaseio.com'
+  });
+
+  router.post('/android/get-data-for-scope-list', (req, res) => {
+    var token = req.headers['x-access-token'];
+    if (!token) return res.status(200).send({
+      error: true,
+      mssg: 'No token provided.'
+    });
+
+    jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
+      if (err) return res.status(200).send({
+        error: true,
+        message: err
+      });
+      const scope = req.body.scope; // comma seperated
+      const type = parseInt(req.body.type);
+      let CURRENT_TABLE = '';
+      if(!scope) return res.status(200).send({
+        error: true,
+        message: 'no scope specified'
+      });
+      let params = {};
+      params['_id'] = 0;
+      params['belongs_to'] = 1; 
+      params['creator'] = 1;   
+      switch(type) {
+      case 0:
+        CURRENT_TABLE = TABLE_EVENTS;
+        params['event_name'] = 1; 
+        params['event_description'] = 1; 
+        params['event_media'] = 1; 
+        params['event_reach'] = 1; 
+        params['event_start'] = 1; 
+        params['event_end'] = 1; 
+        params['event_tags'] = 1; 
+        break;
+      case 1:
+        params['bulletin_title'] = 1; 
+        params['bulletin_description'] = 1; 
+        params['bulletin_media'] = 1; 
+        params['bulletin_reach'] = 1; 
+        CURRENT_TABLE = TABLE_BULLETINS;
+        break;
+      case 2:
+        params['notification_description'] = 1; 
+        params['notification_reach'] = 1; 
+        CURRENT_TABLE = TABLE_NOTIFICATIONS;
+        break;
+      default:
+        return res.status(200).send({
+          error: true,
+          message: 'invalid request'
+        });
+      }
+      dbo.collection(CURRENT_TABLE).find( 
+        {
+          'audience_processed': {
+            '$in': scope.split(',')
+          }
+        })
+        .project(params)
+        .toArray((err, data) => {
+          if (err) return res.json({
+            error: true,
+            mssg: err
+          });
+          res.json({
+            error: false,
+            data: data
+          });
+        });
+    });
+  });
+
+  router.post('/android/check-scope-validity', (req, res) => {
+    var token = req.headers['x-access-token'];
+    if (!token) return res.status(200).send({
+      error: true,
+      mssg: 'No token provided.'
+    });
+
+    jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
+      if (err) return res.status(200).send({
+        error: true,
+        message: err
+      });
+      // let scope = JSON.parse(req.body.scope);
+      let scope;
+      try {
+        scope = JSON.parse(req.body.scope);
+      } catch(e) {
+        return res.status(200).send({
+          error: true,
+          message: 'invalid scope object'
+        });
+      }
+      const type = req.body.type;
+      let toSearch = [];
+      for(const key in scope) {
+        toSearch.push(key);
+      }
+      if(toSearch.length == 0) return res.status(200).send({
+        error: true,
+        message: 'no valid scopes found'
+      });
+      if (scope && type) {
+        let current_hash = 'd_hash';
+        switch(parseInt(type)) {
+        case 0:
+          current_hash = 'event_hash';
+          break;
+        case 1:
+          current_hash = 'bulletin_hash';
+          break;
+        case 2:
+          current_hash = 'notification_hash';
+          break;
+        default: 
+          return res.status(200).send({
+            error: true,
+            message: 'invalid request'
+          });
+        }
+        dbo.collection(TABLE_SCOPE).find( 
+          {
+            'name': {
+              '$in': toSearch
+            }
+          })
+          .toArray((err, data) => {
+            if (err) return res.json({
+              error: true,
+              mssg: 'Internal error occured!'
+            });
+            if(data) {
+              let toSend = {}; // all the invalid scopes
+              let j;
+              for(j=0;j<data.length;j++) {
+                if( scope[data[j].name] !== data[j][current_hash] ) {
+                  toSend[data[j].name] = data[j][current_hash];
+                } 
+              }
+              return res.json({
+                error: false,
+                data: toSend
+              });
+
+            } else {
+              return res.status(200).send({
+                error: true,
+                message: 'no valid scopes found'
+              });
+            }
+            // console.log(data);
+          });
+          
+      }  
+    });
   });
 
   router.post('/web/event-week-data-from-list', (req, res) => {
@@ -155,7 +314,6 @@ MongoClient.connect(url, {
       callback(null, result);
     });
   }
-
 
   router.post('/web/event-data-from-list', (req, res) => {
     var token = req.headers['x-access-token'];
@@ -825,6 +983,7 @@ MongoClient.connect(url, {
       bulletin_title: bulletin_name,
       bulletin_description: bulletin_description,
       bulletin_audience: bulletin_audience,
+      audience_processed: bulletin_audience.split(','),
       bulletin_media: media,
       bulletin_reach: 0,
       bulletin_created: new Date()
@@ -845,6 +1004,7 @@ MongoClient.connect(url, {
       }, function(err, result) {
         if (err) return callback(err);
         mail(creatorEmail, MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + bulletin_name + MAIL_EVENT_FOOTER, function(error) {
+          updateScopeAsync(bulletin_audience.split(','), 1);
           return callback(error);
         });
       });
@@ -1025,6 +1185,7 @@ MongoClient.connect(url, {
       creator_email: creatorEmail,
       notification_description: notification_description,
       notification_audience: notification_audience,
+      audience_processed: notification_audience.split(','),
       notification_reach: 0
     };
     dbo.collection(TABLE_NOTIFICATIONS).insertOne(params, function(err, data) {
@@ -1043,6 +1204,7 @@ MongoClient.connect(url, {
       }, function(err, result) {
         if (err) return callback(err);
         mail(creatorEmail, MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + notification_description + MAIL_EVENT_FOOTER, function(error) {
+          updateScopeAsync(notification_audience.split(','), 2);
           return callback(error);
         });
       });
@@ -1056,7 +1218,7 @@ MongoClient.connect(url, {
     });
     jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
       if (err) return res.status(200).send({
-        error: false,
+        error: true,
         mssg: err
       });
       let event_id = req.body.event_id;
@@ -1203,6 +1365,7 @@ MongoClient.connect(url, {
       event_name: event_name,
       event_description: event_description,
       event_audience: event_audience,
+      audience_processed: event_audience.split(','),
       event_media: media,
       event_start: new Date(event_start),
       event_end: new Date(event_end),
@@ -1225,6 +1388,7 @@ MongoClient.connect(url, {
       }, function(err, result) {
         if (err) return callback(err);
         mail(creatorEmail, MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + event_name + MAIL_EVENT_FOOTER, function(error) {
+          updateScopeAsync(event_audience.split(','), 0);
           callback(error);
         });
       });
@@ -1256,6 +1420,33 @@ MongoClient.connect(url, {
       text += possible.charAt(Math.floor(Math.random() * possible.length));
 
     return text;
+  }
+
+  function updateScopeAsync(audience, type) {
+    let i;
+    // 0 - event
+    // 1 - bulletin
+    // 2 - notification
+    let current_hash = 'd_hash';
+    switch(type) {
+    case 0:
+      current_hash = 'event_hash';
+      break;
+    case 1:
+      current_hash = 'bulletin_hash';
+      break;
+    case 2:
+      current_hash = 'notification_hash';
+      break;
+    default: 
+      return;
+    }
+    let params = {};
+    params[current_hash] = UID(20);
+    console.log(params);
+    for(i=0;i<audience.length;i++) {
+      dbo.collection(TABLE_SCOPE).update( { 'name': audience[i] },  { $set: params } ,  { upsert: true } );
+    }
   }
 });
 
