@@ -64,6 +64,10 @@ MongoClient.connect(url, {
       });
       if (decoded.email == req.body.email && req.body.event_list ) {
         // get current weeks data
+        const today = new Date();
+        const today_midnight = new Date( (today.getMonth()+1) +'/' + today.getDate() + '/' + today.getFullYear() );
+        const week_later_midnight = new Date(today_midnight);
+        week_later_midnight.setDate(week_later_midnight.getDate() + 7); 
         dbo.collection(TABLE_EVENTS).find( 
           {
             'event_id': {
@@ -71,8 +75,9 @@ MongoClient.connect(url, {
             },
             'creator_email': req.body.email,
             'event_start': {
-              $gte: new Date(  ).toISOString,
-              $lte: new Date( new Date() + 7 ).toISOString()
+              // mm/dd/yyyy
+              $gte: today_midnight,
+              $lte: week_later_midnight
             } 
           } )
           .sort({ '_id' : -1 })
@@ -81,7 +86,7 @@ MongoClient.connect(url, {
               error: true,
               mssg: 'Internal error occured!'
             });
-            console.log(data);
+            // console.log(data);
             let i;
             let toSend = [];
             for(i=0;i<data.length;i++) {
@@ -89,7 +94,8 @@ MongoClient.connect(url, {
                 event_id: data[i].event_id,	
                 event_name: data[i].event_name,
                 event_reach: data[i].event_reach,
-                event_audience: data[i].event_enrollees ? data[i].event_enrollees.lenght : 0
+                event_enrollments: data[i].event_enrollees ? data[i].event_enrollees.lenght : 0,
+                event_end: data[i].event_end
               });
             }
             return res.json({
@@ -162,55 +168,57 @@ MongoClient.connect(url, {
           'event_id': {
             '$in': event_list
           }
-        }).toArray((err, data) => {
-          if (err) return res.status(200).json({
-            error: true,
-            mssg: 'Internal error occured!'
-          });
-          var toSend = [];
-          var i;
-          for (var prop in data) {
-            if (prop == 50) break;
-            var dateExists = false;
-            let curr = new Date(data[prop].event_start);
+        })
+          .sort({ 'event_start' : 1 })
+          .toArray((err, data) => {
+            if (err) return res.status(200).json({
+              error: true,
+              mssg: 'Internal error occured!'
+            });
+            var toSend = [];
+            var i;
+            for (var prop in data) {
+              if (prop == 50) break;
+              var dateExists = false;
+              let curr = new Date(data[prop].event_start);
 
-            for (i = 0; i < toSend.length; i++) {
-              let loc = new Date(toSend[i].date);
-              if ((loc.getDate() == curr.getDate()) && (loc.getMonth() == curr.getMonth())) {
-                toSend[i]['reach'] = toSend[i]['reach'] + data[prop].event_reach;
-                toSend[i]['data'].push({
-                  name: data[prop].event_name,
-                  description: data[prop].event_description,
+              for (i = 0; i < toSend.length; i++) {
+                let loc = new Date(toSend[i].date);
+                if ((loc.getDate() == curr.getDate()) && (loc.getMonth() == curr.getMonth())) {
+                  toSend[i]['reach'] = toSend[i]['reach'] + data[prop].event_reach;
+                  toSend[i]['data'].push({
+                    name: data[prop].event_name,
+                    description: data[prop].event_description,
+                    reach: data[prop].event_reach,
+                    audience: data[prop].event_audience,
+                    tags: data[prop].event_tags,
+                    media: data[prop].event_media,
+                    id: data[prop].event_id
+                  });
+                  dateExists = true;
+                }
+              }
+              if (!dateExists) {
+                toSend.push({
+                  date: curr,
                   reach: data[prop].event_reach,
-                  audience: data[prop].event_audience,
-                  tags: data[prop].event_tags,
-                  media: data[prop].event_media,
-                  id: data[prop].event_id
+                  data: [{
+                    name: data[prop].event_name,
+                    description: data[prop].event_description,
+                    reach: data[prop].event_reach,
+                    audience: data[prop].event_audience,
+                    tags: data[prop].event_tags,
+                    media: data[prop].event_media,
+                    id: data[prop].event_id
+                  }]
                 });
-                dateExists = true;
               }
             }
-            if (!dateExists) {
-              toSend.push({
-                date: curr,
-                reach: data[prop].event_reach,
-                data: [{
-                  name: data[prop].event_name,
-                  description: data[prop].event_description,
-                  reach: data[prop].event_reach,
-                  audience: data[prop].event_audience,
-                  tags: data[prop].event_tags,
-                  media: data[prop].event_media,
-                  id: data[prop].event_id
-                }]
-              });
-            }
-          }
-          res.status(200).json({
-            error: false,
-            data: toSend
+            res.status(200).json({
+              error: false,
+              data: toSend
+            });
           });
-        });
       } else {
         return res.status(200).json({
           error: true,
@@ -527,8 +535,8 @@ MongoClient.connect(url, {
               created_by: creator,
               event_title: event_name,
               event_description: event_description,
-              event_start: event_start,
-              event_end: event_end,
+              event_start: new Date(event_start),
+              event_end: new Date(event_end),
               event_tags: event_tags,
               event_audience: event_audience,
               event_media: media,
@@ -1161,8 +1169,8 @@ MongoClient.connect(url, {
       event_description: event_description,
       event_audience: event_audience,
       event_media: media,
-      event_start: event_start,
-      event_end: event_end,
+      event_start: new Date(event_start),
+      event_end: new Date(event_end),
       event_tags: event_tags,
       event_reach: 0
     };
