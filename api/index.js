@@ -416,26 +416,37 @@ MongoClient.connect(url, {
       }
       if (data)
         if (passwordHash.verify(password, data.password)) {
-          const JWTToken = jwt.sign({
-            email: email,
-            name: data.name,
-            college: data.college
-          },
-          APP_SECRET_KEY, {
-            expiresIn: '4d'
-          });
-          let toSend = {
-            hashsum: data.hashsum ? data.hashsum : '-1',
-            bundle: {
-              events: data.events ? data.events : [],
-              bulletins: data.bulletins ? data.bulletins : [],
-              notifications: data.notifications ? data.notifications : []
+          dbo.collection(TABLE_COLLEGES).findOne({ '_id': data.college }, (err, dataH) => {
+            if (err) {
+              return res.sendStatus(402);
             }
-          };
-          res.status(200).json({
-            error: false,
-            token: JWTToken,
-            bundle: toSend
+            if(dataH.data_raw) {
+              const JWTToken = jwt.sign({
+                email: email,
+                name: data.name,
+                college: data.college
+              },
+              APP_SECRET_KEY, {
+                expiresIn: '4d'
+              });
+              let toSend = {
+                hashsum: data.hashsum ? data.hashsum : '-1',
+                bundle: {
+                  events: data.events ? data.events : [],
+                  bulletins: data.bulletins ? data.bulletins : [],
+                  notifications: data.notifications ? data.notifications : [],
+                  hierarchy: dataH.data_raw
+                }
+              };
+              return res.status(200).json({
+                error: false,
+                token: JWTToken,
+                bundle: toSend
+              });
+            } else {
+              return res.sendStatus(402);
+            }
+
           });
         } else {
           return res.sendStatus(401);
@@ -476,29 +487,37 @@ MongoClient.connect(url, {
           email: req.body.email
         }, function(err, data) {
           if (err) return res.sendStatus(401);
-          console.log(data);
-          const JWTToken = jwt.sign({
-            email: data.email,
-            name: data.name,
-            college: data.college
-          },
-          APP_SECRET_KEY, {
-            expiresIn: '4d'
-          });
-
-          let toSend = {
-            hashsum: data.hashsum ? data.hashsum : '-1',
-            bundle: {
-              events: data.events ? data.events : [],
-              bulletins: data.bulletins ? data.bulletins : [],
-              notifications: data.notifications ? data.notifications : []
-            }
-          };
           
-          return res.status(200).json({
-            error: false,
-            token: JWTToken,
-            bundle: toSend
+          dbo.collection(TABLE_COLLEGES).findOne({ '_id': data.college }, (err, dataH) => {
+            if (err) {
+              return res.sendStatus(402);
+            }
+            if(dataH.data_raw) {
+              const JWTToken = jwt.sign({
+                email: decoded.email,
+                name: data.name,
+                college: data.college
+              },
+              APP_SECRET_KEY, {
+                expiresIn: '4d'
+              });
+              let toSend = {
+                hashsum: data.hashsum ? data.hashsum : '-1',
+                bundle: {
+                  events: data.events ? data.events : [],
+                  bulletins: data.bulletins ? data.bulletins : [],
+                  notifications: data.notifications ? data.notifications : [],
+                  hierarchy: dataH.data_raw
+                }
+              };
+              return res.status(200).json({
+                error: false,
+                token: JWTToken,
+                bundle: toSend
+              });
+            } else {
+              return res.sendStatus(402);
+            }
           });
         });
 
@@ -837,9 +856,9 @@ MongoClient.connect(url, {
     if (!token) return res.sendStatus(401);
     jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
       if (err || req.body.email != decoded.email) return res.sendStatus(500);
-      var creator = decoded.email.substring(0, decoded.email.lastIndexOf('@'));
+      var creator = decoded.name;
       var creatorEmail = decoded.email;
-      var belongs_to = 'MRIIRS';
+      var belongs_to = decoded.college;
       var notification_id = creator + '-' + UID(6);
       var notification_description = req.body.description;
       var notification_audience = req.body.audience;
