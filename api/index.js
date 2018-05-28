@@ -1068,16 +1068,18 @@ MongoClient.connect(url, {
         });
       dbo.collection(TABLE_EVENTS).findOne({
         'event_id': event_id,
-        'event_enrollees' : { $in: [roll_no] }
+        'event_enrollees' : { $elemMatch: { user_email: decoded.email , user_roll: roll_no} }
       }, (err, result) => {
         if (err) return res.status(200).send({
           error: true,
           message: err
         });
+        console.log(result);
         if (result) {
           return res.status(200).send({
             error: false,
-            data: true
+            data: true,
+            reach: result.reach
           });
         } else {
           return res.status(200).send({
