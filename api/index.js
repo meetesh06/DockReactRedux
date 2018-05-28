@@ -17,15 +17,6 @@ const smtpTransport = nodemailer.createTransport({
     }
 });
 
-const test_bundle = {
-    hashsum: 'abcdef',
-    bundle: {
-        events: ['meeteshmehta4@gmail.com-vkakmc', 'meeteshmehta4@gmail.com-69L9Lp', 'meeteshmehta4@gmail.com-A7ZcA4'],
-        bulletins: ['bulletins1', 'bulletins2', 'bulletins3'],
-        notifications: ['noti1', 'noti2', 'noti3']
-    }
-};
-
 const TABLE_USERS_ADMIN = 'users_admin';
 const TABLE_USERS = 'users';
 const TABLE_COLLEGES = 'colleges';
@@ -239,6 +230,7 @@ MongoClient.connect(url, {
             }
         });
     });
+
     router.post('/web/notification-data-from-list', (req, res) => {
         var token = req.headers['x-access-token'];
         if (!token) return res.sendStatus(401);
@@ -362,7 +354,8 @@ MongoClient.connect(url, {
                 if (passwordHash.verify(password, data.password)) {
                     const JWTToken = jwt.sign({
                             email: email,
-                            _id: data._id
+                            name: data.name,
+                            college: data.college
                         },
                         APP_SECRET_KEY, {
                             expiresIn: '4d'
@@ -451,86 +444,14 @@ MongoClient.connect(url, {
 
     });
 
-    router.post('/android/signin', (req, res) => {
-        if (!req.body) return res.sendStatus(400);
-        const email = req.body.email;
-        const college = req.body.college;
-        var pin = Math.floor(Math.random() * 9000) + 1000;
-        sendVerificationMail(email, pin, function(error) {
-            if (error) return res.status(200).json({
-                error: true,
-                mssg: error
-            });
-
-            const JWTToken = jwt.sign({
-                    email: email,
-                    pin: pin,
-                    college
-                },
-                APP_SECRET_KEY, {
-                    expiresIn: '2h'
-                });
-            return res.status(200).json({
-                error: false,
-                token: JWTToken
-            });
-        });
-    });
-
-
-
-    router.post('/android/signin/verify', (req, res) => {
-        var token = req.headers['x-access-token'];
-        if (!token) return res.status(200).send({
-            auth: false,
-            mssg: 'No token provided.'
-        });
-
-        jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
-            if (err) return res.status(200).send({
-                auth: false,
-                message: err
-            });
-            if (decoded.pin == req.body.pin && decoded.email == req.body.email) {
-                checkUserExists(decoded.email, (err, data) => {
-                    if (!err) {
-                        const JWTToken = jwt.sign({
-                                email: req.body.email,
-                                college: decoded.college
-                            },
-                            APP_SECRET_KEY, {
-                                expiresIn: '7d'
-                            });
-                        return res.status(200).json({
-                            error: false,
-                            token: JWTToken,
-                            data: data ? data : {}
-                        });
-                    } else {
-                        return res.status(200).json({
-                            error: true,
-                            mssg: err
-                        });
-                    }
-                });
-
-            } else {
-                return res.status(200).json({
-                    error: true,
-                    mssg: 'Not valid credentials!'
-                });
-            }
-        });
-    });
-
     router.post('/events/create-event', (req, res) => {
         var token = req.headers['x-access-token'];
         if (!token) return res.sendStatus(401);
         jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
             if (err || req.body.email != decoded.email) return res.sendStatus(500);
-            var creator = decoded.email.substring(0, decoded.email.lastIndexOf('@'));
+            var creator = decoded.name;
             var creatorEmail = decoded.email;
-            var belongs_to = 'MRIIRS';
+            var belongs_to = decoded.college;
             var event_id = creator + '-' + UID(6);
             var event_name = req.body.name;
             var event_description = req.body.description;
@@ -538,8 +459,7 @@ MongoClient.connect(url, {
             var event_end = req.body.end;
             var event_tags = req.body.tags;
             var event_audience = req.body.audience;
-
-            saveFiles(req.files, res, function(media, err) {
+            saveFiles(req.files ? req.files : [], function(media, err) {
                 if (err)
                     res.sendStatus(403);
                 else {
@@ -555,8 +475,8 @@ MongoClient.connect(url, {
                             event_end: event_end,
                             event_tags: event_tags,
                             event_audience: event_audience,
-                            event_reach: 1,
-                            event_media : media,
+                            event_media: media,
+                            event_reach: 0,
                             updated_on: Date.now()
                         };
 
@@ -637,21 +557,75 @@ MongoClient.connect(url, {
         });
     });
 
-    function updateEventDB(event_id, event_description, event_audience, callback) {
-        dbo.collection(TABLE_EVENTS).updateOne({
-            event_id: event_id
-        }, {
-            $set: {
-                event_description
-            }
-        }, function(err, data) {
-            if (err) {
-                callback(err);
+    router.post('/android/signin', (req, res) => {
+        if (!req.body) return res.sendStatus(400);
+        const email = req.body.email;
+        const college = req.body.college;
+        var pin = Math.floor(Math.random() * 9000) + 1000;
+        sendVerificationMail(email, pin, function(error) {
+            if (error) return res.status(200).json({
+                error: true,
+                mssg: error
+            });
+
+            const JWTToken = jwt.sign({
+                    email: email,
+                    pin: pin,
+                    college
+                },
+                APP_SECRET_KEY, {
+                    expiresIn: '2h'
+                });
+            return res.status(200).json({
+                error: false,
+                token: JWTToken
+            });
+        });
+    });
+
+    router.post('/android/signin/verify', (req, res) => {
+        var token = req.headers['x-access-token'];
+        if (!token) return res.status(200).send({
+            auth: false,
+            mssg: 'No token provided.'
+        });
+
+        jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
+            if (err) return res.status(200).send({
+                auth: false,
+                message: err
+            });
+            if (decoded.pin == req.body.pin && decoded.email == req.body.email) {
+                checkUserExists(decoded.email, (err, data) => {
+                    if (!err) {
+                        const JWTToken = jwt.sign({
+                                email: req.body.email,
+                                college: decoded.college
+                            },
+                            APP_SECRET_KEY, {
+                                expiresIn: '7d'
+                            });
+                        return res.status(200).json({
+                            error: false,
+                            token: JWTToken,
+                            data: data ? data : {}
+                        });
+                    } else {
+                        return res.status(200).json({
+                            error: true,
+                            mssg: err
+                        });
+                    }
+                });
+
             } else {
-                callback(null);
+                return res.status(200).json({
+                    error: true,
+                    mssg: 'Not valid credentials!'
+                });
             }
         });
-    }
+    });
 
     router.post('/android/event/enroll', (req, res) => {
         var token = req.headers['x-access-token'];
@@ -688,6 +662,8 @@ MongoClient.connect(url, {
         });
     });
 
+
+
     function enrollEventDB(event_id, user, callback) {
         dbo.collection(TABLE_EVENTS).updateOne({
             event_id: event_id
@@ -709,15 +685,15 @@ MongoClient.connect(url, {
         if (!token) return res.sendStatus(401);
         jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
             if (err || req.body.email != decoded.email) return res.sendStatus(500);
-            var creator = decoded.email.substring(0, decoded.email.lastIndexOf('@'));
+            var creator = decoded.name;
             var creatorEmail = decoded.email;
-            var belongs_to = 'MRIIRS';
+            var belongs_to = decoded.college;
             var bulletin_id = creator + '-' + UID(6);
             var bulletin_name = req.body.name;
             var bulletin_description = req.body.description;
             var bulletin_audience = req.body.audience;
 
-            saveFiles(req.files ? req.files : [], res, function(media, err) {
+            saveFiles(req.files ? req.files : [], function(media, err) {
                 if (err)
                     res.sendStatus(403);
                 else {
@@ -731,8 +707,8 @@ MongoClient.connect(url, {
                             bulletin_title: bulletin_name,
                             bulletin_description: bulletin_description,
                             bulletin_audience: bulletin_audience,
-                            bulletin_media : media,
-                            bulletin_reach: 1
+                            bulletin_media: media,
+                            bulletin_reach: 0
                         };
 
                         const payload = {
@@ -763,7 +739,7 @@ MongoClient.connect(url, {
             bulletin_description: bulletin_description,
             bulletin_audience: bulletin_audience,
             bulletin_media: media,
-            bulletin_reach: 1,
+            bulletin_reach: 0,
             bulletin_created: new Date()
         };
         dbo.collection(TABLE_BULLETINS).insertOne(params, function(err, data) {
@@ -808,7 +784,7 @@ MongoClient.connect(url, {
                     creator_name: creator,
                     notification_description: notification_description,
                     notification_audience: notification_audience,
-                    notification_reach: 1
+                    notification_reach: 0
                 };
 
                 const payload = {
@@ -826,73 +802,6 @@ MongoClient.connect(url, {
             });
         });
 
-    });
-
-    function saveNotificationToDB(notification_id, creator, creatorEmail, belongs_to, notification_description, notification_audience, callback) {
-        var params = {
-            notification_id: notification_id,
-            belongs_to: belongs_to,
-            creator: creator,
-            creator_email: creatorEmail,
-            notification_description: notification_description,
-            notification_audience: notification_audience,
-            notification_reach: 1
-        };
-        dbo.collection(TABLE_NOTIFICATIONS).insertOne(params, function(err, data) {
-            if (err) {
-                return callback(err);
-            }
-            dbo.collection(TABLE_USERS_ADMIN).update({
-                email: creatorEmail
-            }, {
-                $push: {
-                    notifications: notification_id
-                },
-                $set: {
-                    hashsum: random()
-                }
-            }, function(err, result) {
-                if (err) return callback(err);
-                mail(creatorEmail, MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + notification_description + MAIL_EVENT_FOOTER, function(error) {
-                    return callback(error);
-                });
-            });
-        });
-    }
-    router.post('/android/event/check-enrolled', (req, res) => {
-        var token = req.headers['x-access-token'];
-        if (!token) return res.status(200).send({
-            auth: false,
-            mssg: 'No token provided'
-        });
-        jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
-            if (err) return res.status(200).send({
-                auth: false,
-                message: err
-            });
-            let event_id = req.body.event_id;
-            let roll_no = req.body.roll_no;
-            dbo.collection(TABLE_EVENTS).findOne({
-                event_id: event_id,
-                'event_enrollees.user_roll': roll_no
-            }, (err, result) => {
-                if (err) return res.status(200).send({
-                    error: true,
-                    message: err
-                });
-                if (result) {
-                    return res.status(200).send({
-                        error: false,
-                        data: true
-                    });
-                } else {
-                    return res.status(200).send({
-                        error: false,
-                        data: false
-                    });
-                }
-            });
-        });
     });
 
     router.post('/android/update-user-data', (req, res) => {
@@ -1015,6 +924,92 @@ MongoClient.connect(url, {
         });
     });
 
+
+    function saveNotificationToDB(notification_id, creator, creatorEmail, belongs_to, notification_description, notification_audience, callback) {
+        var params = {
+            notification_id: notification_id,
+            belongs_to: belongs_to,
+            creator: creator,
+            creator_email: creatorEmail,
+            notification_description: notification_description,
+            notification_audience: notification_audience,
+            notification_reach: 0
+        };
+        dbo.collection(TABLE_NOTIFICATIONS).insertOne(params, function(err, data) {
+            if (err) {
+                return callback(err);
+            }
+            dbo.collection(TABLE_USERS_ADMIN).update({
+                email: creatorEmail
+            }, {
+                $push: {
+                    notifications: notification_id
+                },
+                $set: {
+                    hashsum: random()
+                }
+            }, function(err, result) {
+                if (err) return callback(err);
+                mail(creatorEmail, MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + notification_description + MAIL_EVENT_FOOTER, function(error) {
+                    return callback(error);
+                });
+            });
+        });
+    }
+    router.post('/android/event/check-enrolled', (req, res) => {
+        var token = req.headers['x-access-token'];
+        if (!token) return res.status(200).send({
+            auth: false,
+            mssg: 'No token provided'
+        });
+        jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
+            if (err) return res.status(200).send({
+                auth: false,
+                message: err
+            });
+            let event_id = req.body.event_id;
+            let roll_no = req.body.roll_no;
+            dbo.collection(TABLE_EVENTS).findOne({
+                event_id: event_id,
+                'event_enrollees.user_roll': roll_no
+            }, (err, result) => {
+                if (err) return res.status(200).send({
+                    error: true,
+                    message: err
+                });
+                console.log('Event enroll:'+result);
+                if (result) {
+                    return res.status(200).send({
+                        error: false,
+                        data: true
+                    });
+                } else {
+                    return res.status(200).send({
+                        error: false,
+                        data: false
+                    });
+                }
+            });
+        });
+    });
+
+
+    function updateEventDB(event_id, event_description, event_audience, callback) {
+        dbo.collection(TABLE_EVENTS).updateOne({
+            event_id: event_id
+        }, {
+            $set: {
+                event_description
+            }
+        }, function(err, data) {
+            if (err) {
+                callback(err);
+            } else {
+                callback(null);
+            }
+        });
+    }
+
     function updateEventReach(event_id, callback) {
         dbo.collection(TABLE_EVENTS).updateOne({
             event_id: event_id
@@ -1114,7 +1109,7 @@ MongoClient.connect(url, {
             event_start: event_start,
             event_end: event_end,
             event_tags: event_tags,
-            event_reach: 1
+            event_reach: 0
         };
         dbo.collection(TABLE_EVENTS).insertOne(params, function(err, data) {
             if (err) {
@@ -1138,7 +1133,7 @@ MongoClient.connect(url, {
         });
     }
 
-    function saveFiles(files, res, callback) {
+    function saveFiles(files, callback) {
         var media = [];
         Object.entries(files).forEach(([key, value]) => {
             var filename = random() + '-' + value.name;
@@ -1164,32 +1159,4 @@ MongoClient.connect(url, {
 
 module.exports = router;
 
-
-/* TODO */
-// http://localhost/api
-// auth router
-//  login/web - user bundle store in redux
-//  login/android - user bundle { scope }
-// 
-// event router
-//  event/create -- messaging service
-//  event/update -- messaging service
-//  event/get-event-by-id 
-//  event/get-analytics-by-id
-//
-// teacher dashboard
-//  teacher-dashboard/analytics - user_id, hash - 
-//  dashboard/
-//
-// user dashboard
-//  user-dashboard (scope) => ([{updated_timestamp, data},...])
-//  
-// on event create
-//  media storage
-//  normal database entry
-//  send to scope
-//  end response
-//  analytics database entry
-//  updated scope timestamp
-//  
-// scope table
+//TODO : FIX LOGIC OF COLLEGE ON ANDROID LOGIN
