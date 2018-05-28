@@ -1142,7 +1142,7 @@ MongoClient.connect(url, {
         var media = [];
         Object.entries(files).forEach(([key, value]) => {
             var filename = random() + '-' + value.name;
-            var loc = __dirname + '/events/media/' + filename;
+            var loc = __dirname + '/media/' + filename;
             media.push(filename);
             value.mv(loc, function(err) {
                 if (err) callback(null, err);
