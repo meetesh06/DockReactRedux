@@ -654,13 +654,13 @@ MongoClient.connect(url, {
   router.post('/android/signin/verify', (req, res) => {
     var token = req.headers['x-access-token'];
     if (!token) return res.status(200).send({
-      auth: false,
+      error: true,
       mssg: 'No token provided.'
     });
 
     jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
       if (err) return res.status(200).send({
-        auth: false,
+        error: true,
         message: err
       });
       if (decoded.pin == req.body.pin && decoded.email == req.body.email) {
@@ -698,7 +698,7 @@ MongoClient.connect(url, {
   router.post('/android/event/enroll', (req, res) => {
     var token = req.headers['x-access-token'];
     if (!token) return res.status(200).send({
-      auth: false,
+      error: true,
       mssg: 'No token provided'
     });
     var event_id = req.body.event_id;
@@ -712,7 +712,7 @@ MongoClient.connect(url, {
 
     jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
       if (err) return res.status(200).send({
-        auth: false,
+        error: true,
         message: err
       });
       enrollEventDB(event_id, {
@@ -875,12 +875,12 @@ MongoClient.connect(url, {
   router.post('/android/update-user-data', (req, res) => {
     var token = req.headers['x-access-token'];
     if (!token) return res.status(200).send({
-      auth: false,
+      error: true,
       mssg: 'No token provided'
     });
     jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
       if (err) return res.status(200).send({
-        auth: false,
+        error: true,
         message: err
       });
       let roll_no = req.body.roll_no;
@@ -919,12 +919,12 @@ MongoClient.connect(url, {
   router.post('/android/reach', (req, res) => {
     var token = req.headers['x-access-token'];
     if (!token) return res.status(200).send({
-      auth: false,
+      error: true,
       mssg: 'No token provided'
     });
     jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
       if (err) return res.status(200).send({
-        auth: false,
+        error: true,
         message: err
       });
       var type = req.body.type+'';
@@ -1032,16 +1032,21 @@ MongoClient.connect(url, {
   router.post('/android/event/check-enrolled', (req, res) => {
     var token = req.headers['x-access-token'];
     if (!token) return res.status(200).send({
-      auth: false,
+      error: true,
       mssg: 'No token provided'
     });
     jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
       if (err) return res.status(200).send({
-        auth: false,
-        message: err
+        error: false,
+        mssg: err
       });
       let event_id = req.body.event_id;
       let roll_no = req.body.roll_no;
+      if(!roll_no || !event_id) 
+        return res.status(200).send({
+          error: true,
+          mssg: 'invalid details'
+        });
       dbo.collection(TABLE_EVENTS).findOne({
         'event_id': event_id,
         'event_enrollees' : { $in: [roll_no] }
