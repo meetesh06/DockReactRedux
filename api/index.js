@@ -861,7 +861,7 @@ MongoClient.connect(url, {
             });
             var type = req.body.type;
             switch (type) {
-                case 101:
+                case '101':
                     var event_id = req.body.event_id;
                     if (event_id) {
                         updateEventReach(event_id, function(err) {
@@ -880,7 +880,7 @@ MongoClient.connect(url, {
                         });
                     }
                     break;
-                case 102:
+                case '102':
                     var bulletin_id = req.body.bulletin_id;
                     if (bulletin_id) {
                         updateBulletinReach(bulletin_id, function(err) {
@@ -899,7 +899,7 @@ MongoClient.connect(url, {
                         });
                     }
                     break;
-                case 103:
+                case '103':
                     var notification_id = req.body.notification_id;
                     if (notification_id) {
                         updateNotificationReach(notification_id, function(err) {
@@ -973,11 +973,11 @@ MongoClient.connect(url, {
                 event_id: event_id,
                 'event_enrollees.user_roll': roll_no
             }, (err, result) => {
+                console.log(JSON.stringify(result));
                 if (err) return res.status(200).send({
                     error: true,
                     message: err
                 });
-                console.log('Event enroll:'+result);
                 if (result) {
                     return res.status(200).send({
                         error: false,
