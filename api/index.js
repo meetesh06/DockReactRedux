@@ -472,17 +472,20 @@ MongoClient.connect(url, {
     jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
       if (err) return res.sendStatus(401);
       if (decoded.email == req.body.email) {
-        const JWTToken = jwt.sign({
-          email: req.body.email
-        },
-        APP_SECRET_KEY, {
-          expiresIn: '4d'
-        });
-
         dbo.collection(TABLE_USERS_ADMIN).findOne({
           email: req.body.email
         }, function(err, data) {
           if (err) return res.sendStatus(401);
+          console.log(data);
+          const JWTToken = jwt.sign({
+            email: data.email,
+            name: data.name,
+            college: data.college
+          },
+          APP_SECRET_KEY, {
+            expiresIn: '4d'
+          });
+
           let toSend = {
             hashsum: data.hashsum ? data.hashsum : '-1',
             bundle: {
@@ -491,6 +494,7 @@ MongoClient.connect(url, {
               notifications: data.notifications ? data.notifications : []
             }
           };
+          
           return res.status(200).json({
             error: false,
             token: JWTToken,
@@ -923,7 +927,7 @@ MongoClient.connect(url, {
         auth: false,
         message: err
       });
-      var type = req.body.type;
+      var type = req.body.type+'';
       switch (type) {
       case '101':
         var event_id = req.body.event_id;
@@ -983,6 +987,10 @@ MongoClient.connect(url, {
         }
         break;
       default:
+        return res.status(200).send({
+          error: true,
+          message: 'unknown request'
+        });
       }
 
     });
