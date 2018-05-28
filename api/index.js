@@ -971,9 +971,9 @@ MongoClient.connect(url, {
             let roll_no = req.body.roll_no;
             dbo.collection(TABLE_EVENTS).findOne({
                 event_id: event_id,
-                'event_enrollees.user_roll': roll_no
+                event_enrollees.user_roll : roll_no
             }, (err, result) => {
-                console.log(JSON.stringify(result));
+                
                 if (err) return res.status(200).send({
                     error: true,
                     message: err
