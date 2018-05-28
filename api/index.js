@@ -928,9 +928,10 @@ MongoClient.connect(url, {
         message: err
       });
       var type = req.body.type+'';
+      var id = req.body.id;
       switch (type) {
       case '101':
-        var event_id = req.body.event_id;
+        var event_id = id;
         if (event_id) {
           updateEventReach(event_id, function(err) {
             if (err) return res.status(200).send({
@@ -949,7 +950,7 @@ MongoClient.connect(url, {
         }
         break;
       case '102':
-        var bulletin_id = req.body.bulletin_id;
+        var bulletin_id = id;
         if (bulletin_id) {
           updateBulletinReach(bulletin_id, function(err) {
             if (err) return res.status(200).send({
@@ -968,7 +969,7 @@ MongoClient.connect(url, {
         }
         break;
       case '103':
-        var notification_id = req.body.notification_id;
+        var notification_id = id;
         if (notification_id) {
           updateNotificationReach(notification_id, function(err) {
             if (err) return res.status(200).send({
