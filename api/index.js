@@ -630,7 +630,8 @@ MongoClient.connect(url, {
       });
       else return res.json({
         error: false,
-        data: decoded.email
+        data: decoded.email,
+        name: decoded.name
       });
     });
   });
