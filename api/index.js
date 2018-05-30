@@ -37,6 +37,8 @@ const ObjectID = require('mongodb').ObjectID;
 var MongoClient = require('mongodb').MongoClient;
 var url = 'mongodb://dock:D2ckD2ck@103.227.177.152:27017/dock';
 
+const MAX_RETRIES_MESSAGING = 5; // each retry is done 1 second laterr
+
 MongoClient.connect(url, {
   useNewUrlParser: true
 }, function(err, db) {
@@ -233,7 +235,7 @@ MongoClient.connect(url, {
               '$in': req.body.event_list
             },
             'creator_email': req.body.email,
-            'event_start': {
+            'event_end': {
               // mm/dd/yyyy
               $gte: today_midnight,
               $lte: week_later_midnight
@@ -1340,21 +1342,51 @@ MongoClient.connect(url, {
     });
   }
 
-  function sendToScope(scopeArray, payload, callback) {
-    let i;
-    for (i = 0; i < scopeArray.length; i++) {
-      admin.messaging().sendToTopic(scopeArray[i], payload)
-        .then(function(response) {
-
-        })
-        .catch(function(error) {
-          console.log('Error sending message:', error);
-          callback(error);
-        });
-      if (i == scopeArray.length - 1) {
-        callback(null);
-      }
+  function sendToIndividual(scope, payload, retries) {
+    if(retries == MAX_RETRIES_MESSAGING) {
+      console.log('scope: ' + scope + ' permanently failed');
+      return;
     }
+    admin.messaging().sendToTopic(scope, payload)
+      .then(function(response) {
+        console.log(response);
+      })
+      .catch(function(error) {
+        setTimeout( () => { sendToIndividual(scope, payload, retries + 1); }, 1000 );
+      });
+  }
+
+  function sendToScope(scopeArray, payload, callback) {
+    let currentQueue = [...scopeArray];
+    let sending = false;
+    let i = 0;
+    callback(null);
+    console.log(currentQueue);
+    console.log(currentQueue.length);
+    
+    for(i=0;i<currentQueue.length;i++) {
+      sendToIndividual(currentQueue[i], payload, 0);
+    }
+
+    // while(currentQueue.length > 0) {
+    // console.log('while loop', currentQueue);
+    // console.log('sending ', sending);
+      
+    // if (!sending){ 
+    //   sending = true;
+    //   currentQueue.shift();
+    //   admin.messaging().sendToTopic(currentQueue[0], payload)
+    //     .then(function(response) {
+    //       console.log(response);
+    //       currentQueue.shift();
+    //       sending = false;
+    //     })
+    //     .catch(function(error) {
+    //       console.log('scope error: ', currentQueue[0]);
+    //       console.log('Error sending message:', error);
+    //     });
+    // }
+    // }
   }
 
   function saveEventToDB(event_id, creator, creatorEmail, belongs_to, event_name, event_description, event_start, event_end, event_tags, event_audience, media, callback) {
@@ -1444,7 +1476,7 @@ MongoClient.connect(url, {
     }
     let params = {};
     params[current_hash] = UID(20);
-    console.log(params);
+    // console.log(params);
     for(i=0;i<audience.length;i++) {
       dbo.collection(TABLE_SCOPE).update( { 'name': audience[i] },  { $set: params } ,  { upsert: true } );
     }
