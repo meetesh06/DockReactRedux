@@ -748,7 +748,7 @@ MongoClient.connect(url, {
         creation_time,
         event_audience,
         audience_processed: event_audience.split(','),
-        event_reach: 0,
+        event_reach: [],
         event_enrollees: []
       };  
   
