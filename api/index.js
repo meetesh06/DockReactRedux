@@ -78,7 +78,7 @@ MongoClient.connect(url, {
             switch (type) {
                 case 0:
                     CURRENT_TABLE = TABLE_EVENTS;
-                    params['event_name'] = 1;
+                    params['event_title'] = 1;
                     params['event_description'] = 1;
                     params['event_media'] = 1;
                     params['event_reach'] = 1;
@@ -250,7 +250,7 @@ MongoClient.connect(url, {
                         for (i = 0; i < data.length; i++) {
                             toSend.push({
                                 event_id: data[i].event_id,
-                                event_name: data[i].event_name,
+                                event_name: data[i].event_title,
                                 event_reach: data[i].event_reach,
                                 event_enrollments: data[i].event_enrollees ? data[i].event_enrollees.lenght : 0,
                                 event_end: data[i].event_end
@@ -346,7 +346,7 @@ MongoClient.connect(url, {
                                 if ((loc.getDate() == curr.getDate()) && (loc.getMonth() == curr.getMonth())) {
                                     toSend[i]['reach'] = toSend[i]['reach'] + data[prop].event_reach;
                                     toSend[i]['data'].push({
-                                        name: data[prop].event_name,
+                                        name: data[prop].event_title,
                                         description: data[prop].event_description,
                                         reach: data[prop].event_reach,
                                         audience: data[prop].event_audience,
@@ -362,7 +362,7 @@ MongoClient.connect(url, {
                                     date: curr,
                                     reach: data[prop].event_reach,
                                     data: [{
-                                        name: data[prop].event_name,
+                                        name: data[prop].event_title,
                                         description: data[prop].event_description,
                                         reach: data[prop].event_reach,
                                         audience: data[prop].event_audience,
@@ -706,7 +706,7 @@ MongoClient.connect(url, {
   
         let event_id = creator_name + '-' + UID(6);
   
-        let event_name = req.body.name;
+        let event_title = req.body.name;
         let event_description = req.body.description;
         let event_start = new Date(req.body.start);
         let event_end = new Date(req.body.end);
@@ -730,7 +730,7 @@ MongoClient.connect(url, {
           creator_email,
           belongs_to,
           event_id,
-          event_name,
+          event_title,
           event_description,
           event_start,
           event_end,
@@ -1616,7 +1616,7 @@ MongoClient.connect(url, {
           if (err) return callback(err);
           callback(null);
           updateScopeAsync(queryData['event_audience'].split(','), 0);
-          mail(queryData['creator_email'], MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + queryData['event_name'] + MAIL_EVENT_FOOTER, function(error) {
+          mail(queryData['creator_email'], MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + queryData['event_title'] + MAIL_EVENT_FOOTER, function(error) {
             console.log('event_mail_failed',error);
           });
         });
