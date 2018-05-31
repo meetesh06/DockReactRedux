@@ -694,62 +694,148 @@ MongoClient.connect(url, {
         });
 
     });
-
     router.post('/events/create-event', (req, res) => {
-        var token = req.headers['x-access-token'];
-        if (!token) return res.sendStatus(401);
-        jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
-            if (err || req.body.email != decoded.email) return res.sendStatus(500);
-            console.log(req.body);
-            var creator = decoded.name;
-            var creatorEmail = decoded.email;
-            var belongs_to = decoded.college;
-            var event_id = creator + '-' + UID(6);
-            var event_name = req.body.name;
-            var event_description = req.body.description;
-            var event_start = req.body.start;
-            var event_end = req.body.end;
-            var event_tags = req.body.tags;
-            var event_audience = req.body.audience;
-            saveFiles(req.files ? req.files : [], function(media, err) {
-                if (err)
-                    res.sendStatus(403);
-                else {
-                    saveEventToDB(event_id, creator, creatorEmail, belongs_to, event_name, event_description, event_start, event_end, event_tags, event_audience, media, function(err) {
-                        if (err) return res.sendStatus(403);
-                        const data = {
-                            event_id: event_id,
-                            belongs_to: belongs_to,
-                            created_by: creator,
-                            event_title: event_name,
-                            event_description: event_description,
-                            event_start: new Date(event_start),
-                            event_end: new Date(event_end),
-                            event_tags: event_tags,
-                            event_audience: event_audience,
-                            event_media: media,
-                            event_reach: 0,
-                            timestamp: Date.now()
-                        };
-
-                        const payload = {
-                            data: {
-                                type: 'event',
-                                content: JSON.stringify(data)
-                            }
-                        };
-                        sendToScope(event_audience.split(','), payload, function(err) {
-                            if (err) return res.sendStatus(403);
-                            else return res.status(200).json({
-                                error: false
-                            });
-                        });
-                    });
+      var token = req.headers['x-access-token'];
+      if (!token) return res.sendStatus(401);
+      jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
+        if (err || req.body.email != decoded.email) return res.sendStatus(500);
+  
+        let creator_name = decoded.name;
+        let creator_email = decoded.email;
+        let belongs_to = decoded.college;
+  
+        let event_id = creator_name + '-' + UID(6);
+  
+        let event_name = req.body.name;
+        let event_description = req.body.description;
+        let event_start = new Date(req.body.start);
+        let event_end = new Date(req.body.end);
+              
+        let event_venue = req.body.venue;
+        let event_team = req.body.team;
+        let event_category = req.body.category;
+        let event_tags = req.body.tags;
+        let event_c1_name = req.body.c1_name;
+        let event_c1_phone = req.body.c1_phone;
+        let event_c2_name = req.body.c2_name;
+        let event_c2_phone = req.body.c2_phone;
+        let event_c3_name = req.body.c3_name;
+        let event_c3_phone = req.body.c3_phone;
+  
+        let event_audience = req.body.audience;
+        let timestamp = new Date();
+  
+        const queryData = {
+          creator_name,
+          creator_email,
+          belongs_to,
+          event_id,
+          event_name,
+          event_description,
+          event_start,
+          event_end,
+          event_venue,
+          event_team,
+          event_category,
+          event_tags,
+          event_c1_name,
+          event_c1_phone,
+          event_c2_name,
+          event_c2_phone,
+          event_c3_name,
+          event_c3_phone,
+          timestamp,
+          event_audience,
+          audience_processed: event_audience.split(','),
+          event_reach: 0,
+          event_enrollees: []
+        };  
+  
+        saveFiles(req.files ? req.files : [], function(media, err) {
+          if (err)
+            res.sendStatus(403);
+          else {
+            queryData['event_media'] = media;
+            saveEventToDB(queryData, function(err) {
+              if (err) return res.sendStatus(403);
+              console.log('new event created', queryData[event_id]);
+              res.status(200).json({
+                error: false
+              });
+  
+              const payload = {
+                data: {
+                  type: 'event',
+                  content: JSON.stringify(queryData)
                 }
+              };
+              sendToScope(queryData['audience_processed'], payload, function(err) {
+                if(!err) 
+                  console.log('sending to scope for event request');    
+              });
             });
+          }
         });
-
+      });
+  
     });
+
+
+    // router.post('/events/create-event', (req, res) => {
+    //     var token = req.headers['x-access-token'];
+    //     if (!token) return res.sendStatus(401);
+    //     jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
+    //         if (err || req.body.email != decoded.email) return res.sendStatus(500);
+    //         console.log(req.body);
+    //         var creator = decoded.name;
+    //         var creatorEmail = decoded.email;
+    //         var belongs_to = decoded.college;
+    //         var event_id = creator + '-' + UID(6);
+    //         var event_name = req.body.name;
+    //         var event_description = req.body.description;
+    //         var event_start = req.body.start;
+    //         var event_end = req.body.end;
+    //         var event_tags = req.body.tags;
+    //         var event_audience = req.body.audience;
+    //         saveFiles(req.files ? req.files : [], function(media, err) {
+    //             if (err)
+    //                 res.sendStatus(403);
+    //             else {
+    //                 saveEventToDB(event_id, creator, creatorEmail, belongs_to, event_name, event_description, event_start, event_end, event_tags, event_audience, media, function(err) {
+    //                     if (err) return res.sendStatus(403);
+    //                     const data = {
+    //                         event_id: event_id,
+    //                         belongs_to: belongs_to,
+    //                         created_by: creator,
+    //                         event_title: event_name,
+    //                         event_description: event_description,
+    //                         event_start: new Date(event_start),
+    //                         event_end: new Date(event_end),
+    //                         event_tags: event_tags,
+    //                         event_audience: event_audience,
+    //                         event_media: media,
+    //                         event_reach: 0,
+    //                         timestamp: Date.now()
+    //                     };
+
+    //                     const payload = {
+    //                         data: {
+    //                             type: 'event',
+    //                             content: JSON.stringify(data)
+    //                         }
+    //                     };
+    //                     sendToScope(event_audience.split(','), payload, function(err) {
+    //                         if (err) return res.sendStatus(403);
+    //                         else return res.status(200).json({
+    //                             error: false
+    //                         });
+    //                     });
+    //                 });
+    //             }
+    //         });
+    //     });
+
+    // });
 
     router.post('/events/update-event', (req, res) => {
         var token = req.headers['x-access-token'];
@@ -1472,44 +1558,69 @@ MongoClient.connect(url, {
         // }
     }
 
-    function saveEventToDB(event_id, creator, creatorEmail, belongs_to, event_name, event_description, event_start, event_end, event_tags, event_audience, media, callback) {
-        var params = {
-            event_id: event_id,
-            belongs_to: belongs_to,
-            creator_name: creator,
-            creator_email: creatorEmail,
-            event_name: event_name,
-            event_description: event_description,
-            event_audience: event_audience,
-            audience_processed: event_audience.split(','),
-            event_media: media,
-            event_start: new Date(event_start),
-            event_end: new Date(event_end),
-            event_tags: event_tags,
-            event_reach: 0,
-            timestamp: Date.now()
-        };
-        dbo.collection(TABLE_EVENTS).insertOne(params, function(err, data) {
-            if (err) {
-                return callback(err);
-            }
-            dbo.collection(TABLE_USERS_ADMIN).update({
-                email: creatorEmail
-            }, {
-                $push: {
-                    events: event_id
-                },
-                $set: {
-                    hashsum: random()
-                }
-            }, function(err, result) {
-                if (err) return callback(err);
-                mail(creatorEmail, MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + event_name + MAIL_EVENT_FOOTER, function(error) {
-                    updateScopeAsync(event_audience.split(','), 0);
-                    callback(error);
-                });
-            });
+    // function saveEventToDB(event_id, creator, creatorEmail, belongs_to, event_name, event_description, event_start, event_end, event_tags, event_audience, media, callback) {
+    //     var params = {
+    //         event_id: event_id,
+    //         belongs_to: belongs_to,
+    //         creator_name: creator,
+    //         creator_email: creatorEmail,
+    //         event_name: event_name,
+    //         event_description: event_description,
+    //         event_audience: event_audience,
+    //         audience_processed: event_audience.split(','),
+    //         event_media: media,
+    //         event_start: new Date(event_start),
+    //         event_end: new Date(event_end),
+    //         event_tags: event_tags,
+    //         event_reach: 0,
+    //         timestamp: Date.now()
+    //     };
+    //     dbo.collection(TABLE_EVENTS).insertOne(params, function(err, data) {
+    //         if (err) {
+    //             return callback(err);
+    //         }
+    //         dbo.collection(TABLE_USERS_ADMIN).update({
+    //             email: creatorEmail
+    //         }, {
+    //             $push: {
+    //                 events: event_id
+    //             },
+    //             $set: {
+    //                 hashsum: random()
+    //             }
+    //         }, function(err, result) {
+    //             if (err) return callback(err);
+    //             mail(creatorEmail, MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + event_name + MAIL_EVENT_FOOTER, function(error) {
+    //                 updateScopeAsync(event_audience.split(','), 0);
+    //                 callback(error);
+    //             });
+    //         });
+    //     });
+    // }
+
+    function saveEventToDB(queryData, callback) {
+      dbo.collection(TABLE_EVENTS).insertOne(queryData, function(err, data) {
+        if (err) {
+          return callback(err);
+        }
+        dbo.collection(TABLE_USERS_ADMIN).update({
+          email: queryData['creator_email']
+        }, {
+          $push: {
+            events: queryData['event_id']
+          },
+          $set: {
+            hashsum: random()
+          }
+        }, function(err, result) {
+          if (err) return callback(err);
+          callback(null);
+          updateScopeAsync(queryData['event_audience'].split(','), 0);
+          mail(queryData['creator_email'], MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + queryData['event_name'] + MAIL_EVENT_FOOTER, function(error) {
+            console.log('event_mail_failed',error);
+          });
         });
+      });
     }
 
     function saveFiles(files, callback) {
