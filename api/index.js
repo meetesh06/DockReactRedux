@@ -16,7 +16,6 @@ const smtpTransport = nodemailer.createTransport({
         pass: 'D@ckD@ck'
     }
 });
-
 const TABLE_USERS_ADMIN = 'users_admin';
 const TABLE_USERS = 'users';
 const TABLE_COLLEGES = 'colleges';
@@ -27,7 +26,6 @@ const TABLE_SCOPE = 'scopes';
 const jwt = require('jsonwebtoken');
 const random = require('hat');
 const APP_SECRET_KEY = 'IaMnOtMeDiOcRe';
-
 const MAIL_EVENT_TITLE = 'New Event Created';
 const MAIL_EVENT_TEXT = 'You have successfully created a new Event.\n';
 const MAIL_EVENT_DEATILS_TITLE = 'Event Title: ';
@@ -1487,7 +1485,7 @@ MongoClient.connect(url, {
             event_start: new Date(event_start),
             event_end: new Date(event_end),
             event_tags: event_tags,
-            event_reach: 0
+            event_reach: 0,
             timestamp: Date.now()
         };
         dbo.collection(TABLE_EVENTS).insertOne(params, function(err, data) {
