@@ -733,6 +733,7 @@ MongoClient.connect(url, {
                         };
 
                         const payload = {
+                            priority: 'high',
                             data: {
                                 type: 'event',
                                 content: JSON.stringify(data)
@@ -783,6 +784,7 @@ MongoClient.connect(url, {
                     };
 
                     const payload = {
+                        priority: 'high',
                         data: {
                             type: 'event_update',
                             content: JSON.stringify(data)
@@ -924,11 +926,11 @@ MongoClient.connect(url, {
                     user_email: email
                 }
             }
-        }, function(err, data){
-          if(err)
-            callback(err);
-          else
-            callback(null);
+        }, function(err, data) {
+            if (err)
+                callback(err);
+            else
+                callback(null);
         });
     }
 
@@ -974,11 +976,11 @@ MongoClient.connect(url, {
                     user_email: email
                 }
             }
-        }, function(err, data){
-          if(err)
-            callback(err);
-          else
-            callback(null);
+        }, function(err, data) {
+            if (err)
+                callback(err);
+            else
+                callback(null);
         });
     }
 
@@ -1032,6 +1034,7 @@ MongoClient.connect(url, {
                         };
 
                         const payload = {
+                            priority: 'high',
                             data: {
                                 type: 'bulletin',
                                 content: JSON.stringify(data)
@@ -1112,6 +1115,7 @@ MongoClient.connect(url, {
                 };
 
                 const payload = {
+                    priority: 'high',
                     data: {
                         type: 'notification',
                         content: JSON.stringify(data)
