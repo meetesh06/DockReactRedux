@@ -1147,7 +1147,7 @@ MongoClient.connect(url, {
       bulletin_audience: bulletin_audience,
       audience_processed: bulletin_audience.split(','),
       bulletin_media: media,
-      bulletin_reach: 0,
+      bulletin_reach: [],
       bulletin_created: new Date(),
       timestamp: Date.now()
     };
@@ -1270,7 +1270,7 @@ MongoClient.connect(url, {
       notification_description: notification_description,
       notification_audience: notification_audience,
       audience_processed: notification_audience.split(','),
-      notification_reach: 0,
+      notification_reach: [],
       timestamp: Date.now()
     };
     dbo.collection(TABLE_NOTIFICATIONS).insertOne(params, function(err, data) {
