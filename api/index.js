@@ -733,7 +733,6 @@ MongoClient.connect(url, {
                         };
 
                         const payload = {
-                            priority: 'high',
                             data: {
                                 type: 'event',
                                 content: JSON.stringify(data)
@@ -784,7 +783,6 @@ MongoClient.connect(url, {
                     };
 
                     const payload = {
-                        priority: 'high',
                         data: {
                             type: 'event_update',
                             content: JSON.stringify(data)
@@ -1034,7 +1032,6 @@ MongoClient.connect(url, {
                         };
 
                         const payload = {
-                            priority: 'high',
                             data: {
                                 type: 'bulletin',
                                 content: JSON.stringify(data)
@@ -1115,7 +1112,6 @@ MongoClient.connect(url, {
                 };
 
                 const payload = {
-                    priority: 'high',
                     data: {
                         type: 'notification',
                         content: JSON.stringify(data)
@@ -1436,6 +1432,7 @@ MongoClient.connect(url, {
                 console.log(response);
             })
             .catch(function(error) {
+                console.log(error);
                 setTimeout(() => {
                     sendToIndividual(scope, payload, retries + 1);
                 }, 1000);
