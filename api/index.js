@@ -1195,9 +1195,10 @@ MongoClient.connect(url, {
                     notification_description: notification_description,
                     notification_audience: notification_audience,
                     notification_reach: 0,
-                    timestamp: Date.now()
+                    creation_time : Date.now()
                 };
 
+                
                 const payload = {
                     data: {
                         type: 'notification',
