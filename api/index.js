@@ -703,9 +703,7 @@ MongoClient.connect(url, {
         let creator_name = decoded.name;
         let creator_email = decoded.email;
         let belongs_to = decoded.college;
-  
         let event_id = creator_name + '-' + UID(6);
-  
         let event_title = req.body.name;
         let event_description = req.body.description;
         let event_start = new Date(req.body.start);
@@ -715,15 +713,22 @@ MongoClient.connect(url, {
         let event_team = req.body.team;
         let event_category = req.body.category;
         let event_tags = req.body.tags;
+
         let event_c1_name = req.body.c1_name;
         let event_c1_phone = req.body.c1_phone;
         let event_c2_name = req.body.c2_name;
         let event_c2_phone = req.body.c2_phone;
         let event_c3_name = req.body.c3_name;
         let event_c3_phone = req.body.c3_phone;
-  
+
+        let event_other_deatils = {
+            event_coordinator_names : event_c1_name + ',' + event_c2_name + ',' + event_c3_name,
+            event_coordinator_contact : event_c1_phone + ',' + event_c2_phone + ',' + event_c3_phone
+        }
+
         let event_audience = req.body.audience;
         let timestamp = new Date();
+        let creation_time = Date.now();
   
         const queryData = {
           creator_name,
@@ -738,13 +743,9 @@ MongoClient.connect(url, {
           event_team,
           event_category,
           event_tags,
-          event_c1_name,
-          event_c1_phone,
-          event_c2_name,
-          event_c2_phone,
-          event_c3_name,
-          event_c3_phone,
+          event_other_deatils,
           timestamp,
+          creation_time,
           event_audience,
           audience_processed: event_audience.split(','),
           event_reach: 0,
@@ -777,7 +778,7 @@ MongoClient.connect(url, {
           }
         });
       });
-  
+
     });
 
 
@@ -1114,7 +1115,7 @@ MongoClient.connect(url, {
                             bulletin_audience: bulletin_audience,
                             bulletin_media: media,
                             bulletin_reach: 0,
-                            timestamp: Date.now()
+                            creation_time : Date.now()
                         };
 
                         const payload = {
