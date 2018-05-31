@@ -1295,6 +1295,7 @@ MongoClient.connect(url, {
                     break;
                 case '102':
                     var bulletin_id = id;
+                    console.log('bulletin reach request', bulletin_id);
                     if (bulletin_id) {
                         updateBulletinReach(bulletin_id, function(err) {
                             if (err) return res.status(200).send({
@@ -1465,6 +1466,7 @@ MongoClient.connect(url, {
                 bulletin_reach: 1
             }
         }, function(err, data) {
+            console.log(bulletin_id, err, data);
             if (err) {
                 callback(err);
             } else {
