@@ -71,9 +71,17 @@ MongoClient.connect(url, {
         error: true,
         message: 'no scope specified'
       });
+      
+      let params = {};
+
       switch (type) {
       case 0:
         CURRENT_TABLE = TABLE_EVENTS;
+        params = {
+          'event_end': {
+            $gte: new Date()
+          }
+        };
         break;
       case 1:
         CURRENT_TABLE = TABLE_BULLETINS;
@@ -90,7 +98,8 @@ MongoClient.connect(url, {
       dbo.collection(CURRENT_TABLE).find({
         'audience_processed': {
           '$in': scope.split(',')
-        }
+        },
+        ...params
       })
         .toArray((err, data) => {
           if (err) return res.json({
