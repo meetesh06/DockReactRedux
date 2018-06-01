@@ -71,31 +71,14 @@ MongoClient.connect(url, {
         error: true,
         message: 'no scope specified'
       });
-      let params = {};
-      params['_id'] = 0;
-      params['belongs_to'] = 1;
-      params['creator'] = 1;
       switch (type) {
       case 0:
         CURRENT_TABLE = TABLE_EVENTS;
-        params['event_title'] = 1;
-        params['event_description'] = 1;
-        params['event_media'] = 1;
-        params['event_reach'] = 1;
-        params['event_start'] = 1;
-        params['event_end'] = 1;
-        params['event_tags'] = 1;
         break;
       case 1:
-        params['bulletin_title'] = 1;
-        params['bulletin_description'] = 1;
-        params['bulletin_media'] = 1;
-        params['bulletin_reach'] = 1;
         CURRENT_TABLE = TABLE_BULLETINS;
         break;
       case 2:
-        params['notification_description'] = 1;
-        params['notification_reach'] = 1;
         CURRENT_TABLE = TABLE_NOTIFICATIONS;
         break;
       default:
@@ -109,7 +92,6 @@ MongoClient.connect(url, {
           '$in': scope.split(',')
         }
       })
-        .project(params)
         .toArray((err, data) => {
           if (err) return res.json({
             error: true,
@@ -205,6 +187,59 @@ MongoClient.connect(url, {
           });
 
       }
+    });
+  });
+
+  router.post('/cdc/create-info', (req, res) => {
+    console.log(req.body);
+    var token = req.headers['x-access-token'];
+    if (!token) return res.json({ error: true, mssg: 'invalid token' });
+    jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
+      if (err || req.body.email != decoded.email) return res.json({ error: true, mssg: 'invalid token' });
+      var creator = decoded.name;
+      var creator_email = decoded.email;
+      var belongs_to = decoded.college;
+      
+      var cdc_info_id = creator + '-' + UID(6);
+      var cdc_info_title = req.body.title;
+      var cdc_info_description = req.body.description;
+      var cdc_info_audience = req.body.audience;
+
+      let paramsToSend = {
+        creator,
+        creator_email,
+        belongs_to,
+        bulletin_id: cdc_info_id,
+        bulletin_title: cdc_info_title,
+        bulletin_description: cdc_info_description,
+        bulletin_reach: [],
+        important: true,
+        bulletin_audience: cdc_info_audience,
+        audience_processed: cdc_info_audience.split(','),
+        creation_time: Date.now()
+      };
+
+      saveFiles(req.files ? req.files : [], function(media, err) {
+        if (err)
+          res.json({ error: true, mssg: 'error saving files' });
+        else {
+          paramsToSend['bulletin_media'] = media;
+          saveInfoToDB(paramsToSend, function(err) {
+            if (err) return res.json({ error: true, mssg: 'error saving files' });
+            res.json({ error: false });
+
+            const payload = {
+              data: {
+                type: 'bulletin',
+                content: JSON.stringify(paramsToSend)
+              }
+            };
+            sendToScope(cdc_info_audience.split(','), payload, function(err) {
+              console.log('error sending ', err);
+            });
+          });
+        }
+      });
     });
   });
 
@@ -394,11 +429,15 @@ MongoClient.connect(url, {
       if (err) return res.sendStatus(401);
       if (decoded.email == req.body.email) {
         let bulletin_list = req.body.bulletin_list;
-        dbo.collection(TABLE_BULLETINS).find({
+        let info = req.body.info;
+        let params = {
           'bulletin_id': {
             '$in': bulletin_list
           }
-        }).toArray((err, data) => {
+        };
+        if(info)
+          params['important'] = true;
+        dbo.collection(TABLE_BULLETINS).find(params).toArray((err, data) => {
           if (err) return res.status(200).json({
             error: true,
             mssg: 'Internal error occured!'
@@ -721,7 +760,7 @@ MongoClient.connect(url, {
       let event_c3_name = req.body.c3_name;
       let event_c3_phone = req.body.c3_phone;
 
-      let event_other_deatils = {
+      let event_other_details = {
         event_coordinator_names : event_c1_name + ',' + event_c2_name + ',' + event_c3_name,
         event_coordinator_contact : event_c1_phone + ',' + event_c2_phone + ',' + event_c3_phone
       };
@@ -743,7 +782,7 @@ MongoClient.connect(url, {
         event_team,
         event_category,
         event_tags,
-        event_other_deatils,
+        event_other_details,
         timestamp,
         creation_time,
         event_audience,
@@ -1092,43 +1131,48 @@ MongoClient.connect(url, {
     jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
       if (err || req.body.email != decoded.email) return res.sendStatus(500);
       var creator = decoded.name;
-      var creatorEmail = decoded.email;
+      var creator_email = decoded.email;
       var belongs_to = decoded.college;
       var bulletin_id = creator + '-' + UID(6);
-      var bulletin_name = req.body.name;
+      var bulletin_title = req.body.name;
       var bulletin_description = req.body.description;
       var bulletin_audience = req.body.audience;
+
+      let toSend = {
+        creator,
+        creator_email,
+        belongs_to,
+        bulletin_id,
+        bulletin_title,
+        bulletin_description,
+        bulletin_audience,
+        audience_processed: bulletin_audience.split(','),
+        creation_time: Date.now(),
+        bulletin_reach: []
+      };
 
       saveFiles(req.files ? req.files : [], function(media, err) {
         if (err)
           res.sendStatus(403);
         else {
-          saveBulletinToDB(bulletin_id, creator, creatorEmail, belongs_to, bulletin_name, bulletin_description, bulletin_audience, media, function(err) {
+          toSend['bulletin_media'] = media;
+          
+          saveBulletinToDB(toSend, function(err) {
+            console.log(err);
             if (err) return res.sendStatus(403);
-            const data = {
-              bulletin_id: bulletin_id,
-              belongs_to: belongs_to,
-              creator_name: creator,
-              creator_email: creatorEmail,
-              bulletin_title: bulletin_name,
-              bulletin_description: bulletin_description,
-              bulletin_audience: bulletin_audience,
-              bulletin_media: media,
-              bulletin_reach: 0,
-              creation_time : Date.now()
-            };
+            res.status(200).json({
+              error: false
+            });
 
             const payload = {
               data: {
                 type: 'bulletin',
-                content: JSON.stringify(data)
+                content: JSON.stringify(toSend)
               }
             };
             sendToScope(bulletin_audience.split(','), payload, function(err) {
-              if (err) return res.sendStatus(403);
-              else return res.status(200).json({
-                error: false
-              });
+              if(err)
+                console.log('error sending');
             });
           });
         }
@@ -1137,38 +1181,48 @@ MongoClient.connect(url, {
 
   });
 
-  function saveBulletinToDB(bulletin_id, creator, creatorEmail, belongs_to, bulletin_name, bulletin_description, bulletin_audience, media, callback) {
-    var params = {
-      bulletin_id: bulletin_id,
-      belongs_to: belongs_to,
-      creator: creator,
-      bulletin_title: bulletin_name,
-      bulletin_description: bulletin_description,
-      bulletin_audience: bulletin_audience,
-      audience_processed: bulletin_audience.split(','),
-      bulletin_media: media,
-      bulletin_reach: [],
-      bulletin_created: new Date(),
-      timestamp: Date.now()
-    };
-    dbo.collection(TABLE_BULLETINS).insertOne(params, function(err, data) {
+  function saveBulletinToDB(toSend, callback) {
+    dbo.collection(TABLE_BULLETINS).insertOne(toSend, function(err, data) {
       if (err) {
         return callback(err);
       }
       dbo.collection(TABLE_USERS_ADMIN).update({
-        email: creatorEmail
+        email: toSend['creator_email']
       }, {
         $push: {
-          bulletins: bulletin_id
+          bulletins: toSend['bulletin_id']
         },
         $set: {
           hashsum: random()
         }
       }, function(err, result) {
         if (err) return callback(err);
-        mail(creatorEmail, MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + bulletin_name + MAIL_EVENT_FOOTER, function(error) {
-          updateScopeAsync(bulletin_audience.split(','), 1);
+        mail(toSend['creator_email'], MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + toSend['bulletin_title'] + MAIL_EVENT_FOOTER, function(error) {
+          updateScopeAsync(toSend['audience_processed'], 1);
           return callback(error);
+        });
+      });
+    });
+  }
+  function saveInfoToDB(toSend, callback) {
+    dbo.collection(TABLE_BULLETINS).insertOne(toSend, function(err, data) {
+      if (err) {
+        return callback(err);
+      }
+      dbo.collection(TABLE_USERS_ADMIN).update({
+        email: toSend['creator_email']
+      }, {
+        $push: {
+          bulletins: toSend['bulletin_id']
+        },
+        $set: {
+          hashsum: random()
+        }
+      }, function(err, result) {
+        if (err) return callback(err);
+        callback(null);
+        mail(toSend['creator_email'], MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + toSend['bulletin_title'] + MAIL_EVENT_FOOTER, function(error) {
+          updateScopeAsync(toSend['audience_processed'], 1);
         });
       });
     });
@@ -1180,36 +1234,36 @@ MongoClient.connect(url, {
     jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
       if (err || req.body.email != decoded.email) return res.sendStatus(500);
       var creator = decoded.name;
-      var creatorEmail = decoded.email;
+      var creator_email = decoded.email;
       var belongs_to = decoded.college;
       var notification_id = creator + '-' + UID(6);
       var notification_description = req.body.description;
       var notification_audience = req.body.audience;
-
-      saveNotificationToDB(notification_id, creator, creatorEmail, belongs_to, notification_description, notification_audience, function(err) {
+      let toSend = {
+        creator,
+        creator_email,
+        belongs_to,
+        notification_id,
+        notification_description,
+        notification_audience,
+        audience_processed: notification_audience.split(','),
+        notification_reach: [],
+        creation_time: Date.now()
+      };
+      saveNotificationToDB(toSend, function(err) {
         if (err) return res.sendStatus(403);
-        const data = {
-          notification_id: notification_id,
-          belongs_to: belongs_to,
-          creator_name: creator,
-          notification_description: notification_description,
-          notification_audience: notification_audience,
-          notification_reach: 0,
-          creation_time : Date.now()
-        };
+        res.status(200).json({
+          error: false
+        });
 
-                
         const payload = {
           data: {
             type: 'notification',
-            content: JSON.stringify(data)
+            content: JSON.stringify(toSend)
           }
         };
         sendToScope(notification_audience.split(','), payload, function(err) {
-          if (err) return res.sendStatus(403);
-          else return res.status(200).json({
-            error: false
-          });
+          if (err) console.log(err);
         });
       });
     });
@@ -1261,36 +1315,25 @@ MongoClient.connect(url, {
   });
 
 
-  function saveNotificationToDB(notification_id, creator, creatorEmail, belongs_to, notification_description, notification_audience, callback) {
-    var params = {
-      notification_id: notification_id,
-      belongs_to: belongs_to,
-      creator: creator,
-      creator_email: creatorEmail,
-      notification_description: notification_description,
-      notification_audience: notification_audience,
-      audience_processed: notification_audience.split(','),
-      notification_reach: [],
-      timestamp: Date.now()
-    };
-    dbo.collection(TABLE_NOTIFICATIONS).insertOne(params, function(err, data) {
+  function saveNotificationToDB(toSend, callback) {
+    dbo.collection(TABLE_NOTIFICATIONS).insertOne(toSend, function(err, data) {
       if (err) {
         return callback(err);
       }
       dbo.collection(TABLE_USERS_ADMIN).update({
-        email: creatorEmail
+        email: toSend['creator_email']
       }, {
         $push: {
-          notifications: notification_id
+          notifications: toSend['notification_id']
         },
         $set: {
           hashsum: random()
         }
       }, function(err, result) {
         if (err) return callback(err);
-        mail(creatorEmail, MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + notification_description + MAIL_EVENT_FOOTER, function(error) {
-          updateScopeAsync(notification_audience.split(','), 2);
-          return callback(error);
+        callback(null);
+        mail(toSend['creator_email'], MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + toSend['notification_description'] + MAIL_EVENT_FOOTER, function(error) {
+          updateScopeAsync(toSend['creator_email'].audience_processed, 2);
         });
       });
     });
@@ -1533,6 +1576,7 @@ MongoClient.connect(url, {
   }
 
   function sendToScope(scopeArray, payload, callback) {
+    console.log('scope request sent');
     let currentQueue = [...scopeArray];
     let sending = false;
     let i = 0;
@@ -1693,5 +1737,3 @@ MongoClient.connect(url, {
 
 module.exports = router;
 
-
-//TODO : FIX LOGIC OF COLLEGE ON ANDROID LOGIN
