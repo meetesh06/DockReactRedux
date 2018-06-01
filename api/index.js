@@ -7,7 +7,6 @@ const nodemailer = require('nodemailer');
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0;
 const admin = require('firebase-admin');
 const serviceAccount = require('./admincred.json');
-const json2xls = require('json2xls');
 
 const smtpTransport = nodemailer.createTransport({
   host: 'mail.mycampusdock.com',
@@ -64,7 +63,6 @@ MongoClient.connect(url, {
     credential: admin.credential.cert(serviceAccount),
     databaseURL: 'https://mycampusdock-12f5a.firebaseio.com'
   });
-  router.use(json2xls.middleware);
   router.post('/web/enrolee-list-for-event', (req, res) => {
     var token = req.headers['x-access-token'];
     if (!token) return res.json({ error: true, mssg: 'invalid token' });
