@@ -429,6 +429,7 @@ MongoClient.connect(url, {
                     audience: data[prop].event_audience,
                     tags: data[prop].event_tags,
                     media: data[prop].event_media,
+                    enrolles: data[prop].event_enrollees !== undefined ? data[prop].event_enrollees.length : 0 ,
                     id: data[prop].event_id
                   });
                   dateExists = true;
@@ -445,6 +446,7 @@ MongoClient.connect(url, {
                     audience: data[prop].event_audience,
                     tags: data[prop].event_tags,
                     media: data[prop].event_media,
+                    enrolles: data[prop].event_enrollees !== undefined ? data[prop].event_enrollees.length : 0 ,
                     id: data[prop].event_id
                   }]
                 });
@@ -475,10 +477,12 @@ MongoClient.connect(url, {
         let params = {
           'bulletin_id': {
             '$in': bulletin_list
-          }
+          },
+          important: { $ne: true }
         };
-        if(info)
+        if(info != undefined) {
           params['important'] = true;
+        }
         dbo.collection(TABLE_BULLETINS).find(params).toArray((err, data) => {
           if (err) return res.status(200).json({
             error: true,
@@ -945,6 +949,12 @@ MongoClient.connect(url, {
             reload: false
           });
         } else {
+          res.send({
+            error: false,
+            mssg: 'success',
+            reload: false
+          });
+
           const data = {
             event_id: event_id,
             event_description: event_description
@@ -957,19 +967,7 @@ MongoClient.connect(url, {
             }
           };
           sendToScope(event_audience.split(','), payload, function(err) {
-            if (err) {
-              return res.send({
-                error: true,
-                mssg: 'error saving changes',
-                reload: false
-              });
-            } else {
-              return res.send({
-                error: false,
-                mssg: 'success',
-                reload: false
-              });
-            }
+            if(err) console.log('update event send to audience');
           });
         }
       });
@@ -1440,6 +1438,7 @@ MongoClient.connect(url, {
       if (err) {
         callback(err);
       } else {
+        updateScopeAsync(event_audience.split(','), 0);
         callback(null);
       }
     });

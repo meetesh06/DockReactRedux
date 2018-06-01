@@ -1,11 +1,11 @@
-// const compression = require('compression');
+const compression = require('compression');
 const config = require('./config');
 const api = require('./api');
 const express = require('express');
 var path = require('path');
 
 const server = express();
-// server.use(compression());
+server.use(compression());
 server.set('view engine', 'ejs');
 server.use(express.static(path.join(__dirname, 'dock_frontend/build')));
 server.use('/media',express.static(path.join(__dirname, 'api/media')));
