@@ -7,6 +7,8 @@ const nodemailer = require('nodemailer');
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0;
 const admin = require('firebase-admin');
 const serviceAccount = require('./admincred.json');
+const json2xls = require('json2xls');
+
 const smtpTransport = nodemailer.createTransport({
   host: 'mail.mycampusdock.com',
   port: 465,
@@ -36,7 +38,18 @@ var MongoClient = require('mongodb').MongoClient;
 var url = 'mongodb://dock:D2ckD2ck@103.227.177.152:27017/dock';
 
 const MAX_RETRIES_MESSAGING = 5; // each retry is done 1 second laterr
-
+var jsonArr = [{
+  foo: 'bar',
+  qux: 'moo',
+  poo: 123,
+  stux: new Date()
+},
+{
+  foo: 'bar',
+  qux: 'moo',
+  poo: 345,
+  stux: new Date()
+}];
 MongoClient.connect(url, {
   useNewUrlParser: true
 }, function(err, db) {
@@ -50,6 +63,29 @@ MongoClient.connect(url, {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
     databaseURL: 'https://mycampusdock-12f5a.firebaseio.com'
+  });
+  router.use(json2xls.middleware);
+  router.post('/web/enrolee-list-for-event', (req, res) => {
+    var token = req.headers['x-access-token'];
+    if (!token) return res.json({ error: true, mssg: 'invalid token' });
+    jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
+      if (err || req.body.email != decoded.email) return res.json({ error: true, mssg: 'invalid token' });
+      let event_id = req.body.event_id;
+      
+      dbo.collection(TABLE_EVENTS).findOne({ event_id }, (err, data) => {
+        if(err) return res.json({ error: true, mssg: 'event not found' });        
+        if(data) {
+          if(data.event_enrollees && data.event_enrollees.length > 0) {
+            res.json({error: false, data: data.event_enrollees });
+          } else {
+            res.json({error: false, data: [] });
+          }
+        } else {
+          res.json({ error: true, mssg: 'event not found' });
+        }
+      }); 
+    });
+
   });
 
   router.post('/android/get-data-for-scope-list', (req, res) => {
@@ -200,7 +236,6 @@ MongoClient.connect(url, {
   });
 
   router.post('/cdc/create-info', (req, res) => {
-    console.log(req.body);
     var token = req.headers['x-access-token'];
     if (!token) return res.json({ error: true, mssg: 'invalid token' });
     jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
@@ -1340,9 +1375,9 @@ MongoClient.connect(url, {
         }
       }, function(err, result) {
         if (err) return callback(err);
-        callback(null);
+        callback(null);        
+        updateScopeAsync(toSend['audience_processed'], 2);
         mail(toSend['creator_email'], MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + toSend['notification_description'] + MAIL_EVENT_FOOTER, function(error) {
-          updateScopeAsync(toSend['creator_email'].audience_processed, 2);
         });
       });
     });
