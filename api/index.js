@@ -739,6 +739,7 @@ MongoClient.connect(url, {
   });
 
   router.post('/verify', (req, res) => {
+    console.log(req.body);
     var token = req.headers['x-access-token'];
     if (!token) return res.sendStatus(401);
     jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
@@ -1251,10 +1252,11 @@ MongoClient.connect(url, {
         }
       }, function(err, result) {
         if (err) return callback(err);
-        mail(toSend['creator_email'], MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + toSend['bulletin_title'] + MAIL_EVENT_FOOTER, function(error) {
-          updateScopeAsync(toSend['audience_processed'], 1);
-          return callback(error);
-        });
+        callback(null);
+        updateScopeAsync(toSend['audience_processed'], 1);
+        // mail(toSend['creator_email'], MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + toSend['bulletin_title'] + MAIL_EVENT_FOOTER, function(error) {
+        //   return callback(error);
+        // });
       });
     });
   }
@@ -1387,8 +1389,8 @@ MongoClient.connect(url, {
         if (err) return callback(err);
         callback(null);        
         updateScopeAsync(toSend['audience_processed'], 2);
-        mail(toSend['creator_email'], MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + toSend['notification_description'] + MAIL_EVENT_FOOTER, function(error) {
-        });
+        // mail(toSend['creator_email'], MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + toSend['notification_description'] + MAIL_EVENT_FOOTER, function(error) {
+        // });
       });
     });
   }
@@ -1594,6 +1596,7 @@ MongoClient.connect(url, {
 
 
   function mail(reciever, subject, text, callback) {
+
     var mailOptions = {
       from: '"Campus Dock" <support@mycampusdock.com>',
       to: reciever,
@@ -1722,9 +1725,9 @@ MongoClient.connect(url, {
         if (err) return callback(err);
         callback(null);
         updateScopeAsync(queryData['event_audience'].split(','), 0);
-        mail(queryData['creator_email'], MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + queryData['event_title'] + MAIL_EVENT_FOOTER, function(error) {
-          console.log('event_mail_failed',error);
-        });
+        // mail(queryData['creator_email'], MAIL_EVENT_TITLE, MAIL_EVENT_TEXT + MAIL_EVENT_DEATILS_TITLE + queryData['event_title'] + MAIL_EVENT_FOOTER, function(error) {
+        //   console.log('event_mail_failed',error);
+        // });
       });
     });
   }
