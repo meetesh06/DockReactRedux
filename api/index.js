@@ -312,7 +312,6 @@ MongoClient.connect(url, {
           .sort({
             '_id': -1
           })
-          .limit(15)
           .toArray((err, data) => {
             if (err) return res.json({
               error: true,
@@ -404,9 +403,8 @@ MongoClient.connect(url, {
             '$in': event_list
           }
         })
-          .limit(50)
           .sort({
-            'event_start': 1
+            _id : -1
           })
           .toArray((err, data) => {
             if (err) return res.status(200).json({
@@ -416,7 +414,6 @@ MongoClient.connect(url, {
             var toSend = [];
             var i;
             for (var prop in data) {
-              if (prop == 50) break;
               var dateExists = false;
               let curr = new Date(data[prop].event_start);
               let start = new Date(data[prop].event_start);
@@ -494,7 +491,7 @@ MongoClient.connect(url, {
         if(info != undefined) {
           params['important'] = true;
         }
-        dbo.collection(TABLE_BULLETINS).find(params).toArray((err, data) => {
+        dbo.collection(TABLE_BULLETINS).find(params).sort( { _id: -1 } ).toArray((err, data) => {
           if (err) return res.status(200).json({
             error: true,
             mssg: 'Internal error occured!'
@@ -552,6 +549,7 @@ MongoClient.connect(url, {
 
   router.post('/web/notification-data-from-list', (req, res) => {
     var token = req.headers['x-access-token'];
+    console.log(req.body);
     if (!token) return res.sendStatus(401);
     jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
       if (err) return res.sendStatus(401);
@@ -562,8 +560,7 @@ MongoClient.connect(url, {
             '$in': notification_list
           }
         })
-          .sort({ _id: 1 })
-          .max(50)
+          .sort({ _id: -1 })
           .toArray((err, data) => {
             if (err) return res.status(200).json({
               error: true,
@@ -572,7 +569,7 @@ MongoClient.connect(url, {
             var toSend = [];
             var i;
             for (var prop in data) {
-              if (prop == 50) break;
+              // if (prop == 50) break;
               var dateExists = false;
               let curr = new Date(new ObjectID(data[prop]._id).getTimestamp());
               let ISTTime = new Date(curr.getTime() + (330 + curr.getTimezoneOffset())*60000);
@@ -1478,7 +1475,8 @@ MongoClient.connect(url, {
       var event_id = id;
       let payload = {
         email: decoded.email,
-        name: decoded.name
+        name: decoded.name,
+        timestamp: new Date()
       };
       switch (type) {
       case '101':
