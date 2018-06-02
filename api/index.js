@@ -300,8 +300,8 @@ MongoClient.connect(url, {
         // get current weeks data
         const today = new Date();
         const today_midnight = new Date((today.getMonth() + 1) + '/' + today.getDate() + '/' + today.getFullYear());
-        const week_later_midnight = new Date(today_midnight);
-        week_later_midnight.setDate(week_later_midnight.getDate() + 7);
+        const week_later_midnight = new Date();
+        week_later_midnight.setDate(week_later_midnight.getDate() + 8);
         dbo.collection(TABLE_EVENTS).find({
           'event_id': {
             '$in': req.body.event_list
@@ -310,12 +310,13 @@ MongoClient.connect(url, {
           'event_end': {
             // mm/dd/yyyy
             $gte: today_midnight,
-            $lte: week_later_midnight
+            $lt: new Date(today_midnight.getTime() + (30 * 24 * 60 * 60 * 1000))
           }
         })
           .sort({
             '_id': -1
           })
+          .limit(15)
           .toArray((err, data) => {
             if (err) return res.json({
               error: true,
@@ -403,6 +404,7 @@ MongoClient.connect(url, {
             '$in': event_list
           }
         })
+          .limit(50)
           .sort({
             'event_start': 1
           })
@@ -425,9 +427,11 @@ MongoClient.connect(url, {
                   toSend[i]['data'].push({
                     name: data[prop].event_title,
                     description: data[prop].event_description,
-                    reach: data[prop].event_reach,
+                    reach: data[prop].event_reach.length,
                     audience: data[prop].event_audience,
                     tags: data[prop].event_tags,
+                    start: data[prop].event_start,
+                    end: data[prop].event_end,
                     media: data[prop].event_media,
                     enrolles: data[prop].event_enrollees !== undefined ? data[prop].event_enrollees.length : 0 ,
                     id: data[prop].event_id
@@ -442,9 +446,11 @@ MongoClient.connect(url, {
                   data: [{
                     name: data[prop].event_title,
                     description: data[prop].event_description,
-                    reach: data[prop].event_reach,
+                    reach: data[prop].event_reach.length,
                     audience: data[prop].event_audience,
                     tags: data[prop].event_tags,
+                    start: data[prop].event_start,
+                    end: data[prop].event_end,
                     media: data[prop].event_media,
                     enrolles: data[prop].event_enrollees !== undefined ? data[prop].event_enrollees.length : 0 ,
                     id: data[prop].event_id
