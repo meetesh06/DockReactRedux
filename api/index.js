@@ -795,6 +795,7 @@ MongoClient.connect(url, {
 
   });
   router.post('/events/create-event', (req, res) => {
+    console.log(req.body);
     var token = req.headers['x-access-token'];
     if (!token) return res.sendStatus(401);
     jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
