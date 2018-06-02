@@ -414,7 +414,7 @@ MongoClient.connect(url, {
             var toSend = [];
             var i;
             for (var prop in data) {
-              var dateExists = false;
+              let dateExists = false;
               let curr = new Date(data[prop].event_start);
               let start = new Date(data[prop].event_start);
               let end = new Date(data[prop].event_end);
