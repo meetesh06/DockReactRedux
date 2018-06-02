@@ -298,8 +298,6 @@ MongoClient.connect(url, {
       });
       if (decoded.email == req.body.email && req.body.event_list) {
         // get current weeks data
-        const today = new Date();
-        const today_midnight = new Date((today.getMonth() + 1) + '/' + today.getDate() + '/' + today.getFullYear());
         const week_later_midnight = new Date();
         week_later_midnight.setDate(week_later_midnight.getDate() + 8);
         dbo.collection(TABLE_EVENTS).find({
@@ -308,9 +306,7 @@ MongoClient.connect(url, {
           },
           'creator_email': req.body.email,
           'event_end': {
-            // mm/dd/yyyy
-            $gte: today_midnight,
-            $lt: new Date(today_midnight.getTime() + (30 * 24 * 60 * 60 * 1000))
+            $lt: week_later_midnight
           }
         })
           .sort({
@@ -326,12 +322,16 @@ MongoClient.connect(url, {
             let i;
             let toSend = [];
             for (i = 0; i < data.length; i++) {
+              let start = new Date(data[i].event_start);
+              let end = new Date(data[i].event_end);
+              let event_range = start.getDate() + '/' + (start.getMonth()+1) + '/' + start.getFullYear() + ' - ' +end.getDate() + '/' + (end.getMonth()+1) + '/' + end.getFullYear();
               toSend.push({
                 event_id: data[i].event_id,
                 event_name: data[i].event_title,
                 event_reach: data[i].event_reach,
                 event_enrollments: data[i].event_enrollees ? data[i].event_enrollees.lenght : 0,
-                event_end: data[i].event_end
+                event_end: data[i].event_end,
+                event_range
               });
             }
             return res.json({
@@ -419,7 +419,10 @@ MongoClient.connect(url, {
               if (prop == 50) break;
               var dateExists = false;
               let curr = new Date(data[prop].event_start);
-
+              let start = new Date(data[prop].event_start);
+              let end = new Date(data[prop].event_end);
+              let event_range = start.getDate() + '/' + (start.getMonth()+1) + '/' + start.getFullYear() + ' - ' +end.getDate() + '/' + (end.getMonth()+1) + '/' + end.getFullYear();
+              
               for (i = 0; i < toSend.length; i++) {
                 let loc = new Date(toSend[i].date);
                 if ((loc.getDate() == curr.getDate()) && (loc.getMonth() == curr.getMonth())) {
@@ -434,7 +437,8 @@ MongoClient.connect(url, {
                     end: data[prop].event_end,
                     media: data[prop].event_media,
                     enrolles: data[prop].event_enrollees !== undefined ? data[prop].event_enrollees.length : 0 ,
-                    id: data[prop].event_id
+                    id: data[prop].event_id,
+                    event_range
                   });
                   dateExists = true;
                 }
@@ -453,7 +457,8 @@ MongoClient.connect(url, {
                     end: data[prop].event_end,
                     media: data[prop].event_media,
                     enrolles: data[prop].event_enrollees !== undefined ? data[prop].event_enrollees.length : 0 ,
-                    id: data[prop].event_id
+                    id: data[prop].event_id,
+                    event_range
                   }]
                 });
               }
@@ -556,51 +561,54 @@ MongoClient.connect(url, {
           'notification_id': {
             '$in': notification_list
           }
-        }).toArray((err, data) => {
-          if (err) return res.status(200).json({
-            error: true,
-            mssg: 'Internal error occured!'
-          });
-          var toSend = [];
-          var i;
-          for (var prop in data) {
-            if (prop == 50) break;
-            var dateExists = false;
-            let curr = new Date(new ObjectID(data[prop]._id).getTimestamp());
-
-            for (i = 0; i < toSend.length; i++) {
-              let loc = new Date(toSend[i].date);
-              if ((loc.getDate() == curr.getDate()) && (loc.getMonth() == curr.getMonth())) {
-                toSend[i]['reach'] = toSend[i]['reach'] + data[prop].notification_reach;
-                toSend[i]['data'].push({
-                  description: data[prop].notification_description,
-                  reach: data[prop].notification_reach,
-                  audience: data[prop].notification_audience,
-                  id: data[prop].notification_id,
-                  name: 'created: ' + curr.getHours() + ':' + curr.getMinutes()
+        })
+          .sort({ _id: 1 })
+          .max(50)
+          .toArray((err, data) => {
+            if (err) return res.status(200).json({
+              error: true,
+              mssg: 'Internal error occured!'
+            });
+            var toSend = [];
+            var i;
+            for (var prop in data) {
+              if (prop == 50) break;
+              var dateExists = false;
+              let curr = new Date(new ObjectID(data[prop]._id).getTimestamp());
+              let ISTTime = new Date(curr.getTime() + (330 + curr.getTimezoneOffset())*60000);
+              for (i = 0; i < toSend.length; i++) {
+                let loc = new Date(toSend[i].date);
+                if ((loc.getDate() == curr.getDate()) && (loc.getMonth() == curr.getMonth())) {
+                  toSend[i]['reach'] = toSend[i]['reach'] + data[prop].notification_reach;
+                  toSend[i]['data'].push({
+                    description: data[prop].notification_description,
+                    reach: data[prop].notification_reach,
+                    audience: data[prop].notification_audience,
+                    id: data[prop].notification_id,
+                    name: 'created: ' + ISTTime.getHours() + ':' + ISTTime.getMinutes()
+                  });
+                  dateExists = true;
+                }
+              }
+              if (!dateExists) {
+                toSend.push({
+                  date: curr,
+                  reach: data[prop].event_reach,
+                  data: [{
+                    description: data[prop].notification_description,
+                    reach: data[prop].notification_reach,
+                    audience: data[prop].notification_audience,
+                    id: data[prop].notification_id,
+                    name: 'created: ' + ISTTime.getHours() + ':' + ISTTime.getMinutes()
+                  }]
                 });
-                dateExists = true;
               }
             }
-            if (!dateExists) {
-              toSend.push({
-                date: curr,
-                reach: data[prop].event_reach,
-                data: [{
-                  description: data[prop].notification_description,
-                  reach: data[prop].notification_reach,
-                  audience: data[prop].notification_audience,
-                  id: data[prop].notification_id,
-                  name: 'created: ' + curr.getHours() + ':' + curr.getMinutes()
-                }]
-              });
-            }
-          }
-          res.status(200).json({
-            error: false,
-            data: toSend
+            res.status(200).json({
+              error: false,
+              data: toSend
+            });
           });
-        });
       } else {
         return res.status(200).json({
           error: true,
