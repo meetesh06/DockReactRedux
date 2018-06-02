@@ -413,13 +413,13 @@ MongoClient.connect(url, {
             });
             var toSend = [];
             var i;
+            var dateExists = false;
             for (var prop in data) {
-              let dateExists = false;
+              dateExists = false;
               let curr = new Date(data[prop].event_start);
               let start = new Date(data[prop].event_start);
               let end = new Date(data[prop].event_end);
               let event_range = start.getDate() + '/' + (start.getMonth()+1) + '/' + start.getFullYear() + ' - ' +end.getDate() + '/' + (end.getMonth()+1) + '/' + end.getFullYear();
-              
               for (i = 0; i < toSend.length; i++) {
                 let loc = new Date(toSend[i].date);
                 if ((loc.getDate() == curr.getDate()) && (loc.getMonth() == curr.getMonth())) {
@@ -460,6 +460,7 @@ MongoClient.connect(url, {
                 });
               }
             }
+            console.log(toSend);
             res.status(200).json({
               error: false,
               data: toSend
