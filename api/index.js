@@ -404,66 +404,16 @@ MongoClient.connect(url, {
           }
         })
           .sort({
-            _id : -1
+            'event_start' : -1
           })
           .toArray((err, data) => {
             if (err) return res.status(200).json({
               error: true,
               mssg: 'Internal error occured!'
             });
-            var toSend = [];
-            var i;
-            var dateExists = false;
-            for (var prop in data) {
-              dateExists = false;
-              let curr = new Date(data[prop].event_start);
-              let start = new Date(data[prop].event_start);
-              let end = new Date(data[prop].event_end);
-              let event_range = start.getDate() + '/' + (start.getMonth()+1) + '/' + start.getFullYear() + ' - ' +end.getDate() + '/' + (end.getMonth()+1) + '/' + end.getFullYear();
-              for (i = 0; i < toSend.length; i++) {
-                let loc = new Date(toSend[i].date);
-                if ((loc.getDate() == curr.getDate()) && (loc.getMonth() == curr.getMonth())) {
-                  toSend[i]['reach'] = toSend[i]['reach'] + data[prop].event_reach;
-                  toSend[i]['data'].push({
-                    name: data[prop].event_title,
-                    description: data[prop].event_description,
-                    reach: data[prop].event_reach.length,
-                    audience: data[prop].event_audience,
-                    tags: data[prop].event_tags,
-                    start: data[prop].event_start,
-                    end: data[prop].event_end,
-                    media: data[prop].event_media,
-                    enrolles: data[prop].event_enrollees !== undefined ? data[prop].event_enrollees.length : 0 ,
-                    id: data[prop].event_id,
-                    event_range
-                  });
-                  dateExists = true;
-                }
-              }
-              if (!dateExists) {
-                toSend.push({
-                  date: curr,
-                  reach: data[prop].event_reach,
-                  data: [{
-                    name: data[prop].event_title,
-                    description: data[prop].event_description,
-                    reach: data[prop].event_reach.length,
-                    audience: data[prop].event_audience,
-                    tags: data[prop].event_tags,
-                    start: data[prop].event_start,
-                    end: data[prop].event_end,
-                    media: data[prop].event_media,
-                    enrolles: data[prop].event_enrollees !== undefined ? data[prop].event_enrollees.length : 0 ,
-                    id: data[prop].event_id,
-                    event_range
-                  }]
-                });
-              }
-            }
-            console.log(toSend);
             res.status(200).json({
               error: false,
-              data: toSend
+              data
             });
           });
       } else {
@@ -501,7 +451,6 @@ MongoClient.connect(url, {
           var i;
 
           for (var prop in data) {
-            if (prop == 50) break;
             var dateExists = false;
             let curr = new Date(new ObjectID(data[prop]._id).getTimestamp());
             for (i = 0; i < toSend.length; i++) {
@@ -967,21 +916,6 @@ MongoClient.connect(url, {
             error: false,
             mssg: 'success',
             reload: false
-          });
-
-          const data = {
-            event_id: event_id,
-            event_description: event_description
-          };
-
-          const payload = {
-            data: {
-              type: 'event_update',
-              content: JSON.stringify(data)
-            }
-          };
-          sendToScope(event_audience.split(','), payload, function(err) {
-            if(err) console.log('update event send to audience');
           });
         }
       });
