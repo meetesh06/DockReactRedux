@@ -437,7 +437,7 @@ MongoClient.connect(url, {
                         }
                     })
                     .sort({
-                        'event_start': -1
+                        '_id': -1
                     })
                     .toArray((err, data) => {
                         if (err) return res.status(200).json({
@@ -536,7 +536,6 @@ MongoClient.connect(url, {
 
     router.post('/web/notification-data-from-list', (req, res) => {
         var token = req.headers['x-access-token'];
-        console.log(req.body);
         if (!token) return res.sendStatus(401);
         jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
             if (err) return res.sendStatus(401);
