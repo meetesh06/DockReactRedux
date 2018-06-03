@@ -1013,12 +1013,17 @@ MongoClient.connect(url, {
                                 APP_SECRET_KEY, {
                                     expiresIn: '100d'
                                 });
-                        }
-                        return res.status(200).json({
-                            error: false,
-                            token: token,
-                            data: data ? data : {}
-                        });
+                            return res.status(200).json({
+                                error: false,
+                                token: token,
+                                data: data ? data : {}
+                            });
+                        } else
+                            return res.status(200).json({
+                                error: false,
+                                token: token,
+                                data: data ? data : {}
+                            });
                     } else {
                         return res.status(200).json({
                             error: true,
