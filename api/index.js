@@ -1003,18 +1003,20 @@ MongoClient.connect(url, {
             if (decoded.pin == req.body.pin && decoded.email == req.body.email) {
                 checkUserExists(decoded.email, (err, data) => {
                     if (!err) {
-                        const JWTToken = jwt.sign({
-                                email: req.body.email,
-                                college: decoded.college,
-                                name: data.username,
-                                scope: data.scope
-                            },
-                            APP_SECRET_KEY, {
-                                expiresIn: '100d'
-                            });
+                        if (data) {
+                            const token = jwt.sign({
+                                    email: req.body.email,
+                                    college: decoded.college,
+                                    name: data.username,
+                                    scope: data.scope
+                                },
+                                APP_SECRET_KEY, {
+                                    expiresIn: '100d'
+                                });
+                        }
                         return res.status(200).json({
                             error: false,
-                            token: JWTToken,
+                            token: token,
                             data: data ? data : {}
                         });
                     } else {
