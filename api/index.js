@@ -8,8 +8,7 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0;
 const admin = require('firebase-admin');
 const serviceAccount = require('./admincred.json');
 const imagemin = require('imagemin');
-const imageminPngquant = require('imagemin-pngquant');
-const imageminMozjpeg = require('imagemin-mozjpeg'); 
+const imageminWebp = require('imagemin-webp');
 
 const smtpTransport = nodemailer.createTransport({
     host: 'mail.mycampusdock.com',
@@ -1755,10 +1754,7 @@ MongoClient.connect(url, {
                   console.log('file saved');
                   imagemin([loc], __dirname + '/media/', {
                     plugins: [
-                        imageminMozjpeg( {
-                          quality: 40
-                        } ),
-                        imageminPngquant({quality: '40'})
+                        imageminWebp({quality: 50})
                     ]
                   }).then(files => {
                       console.log('compress done');
