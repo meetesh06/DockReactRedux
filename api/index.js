@@ -9,7 +9,7 @@ const admin = require('firebase-admin');
 const serviceAccount = require('./admincred.json');
 const imagemin = require('imagemin');
 const imageminWebp = require('imagemin-webp');
-
+const fs = require('fs');
 const smtpTransport = nodemailer.createTransport({
     host: 'mail.mycampusdock.com',
     port: 465,
@@ -1743,7 +1743,7 @@ MongoClient.connect(url, {
         Object.entries(files).forEach(([key, value]) => {
             var filename = random() + '-' + value.name;
             var loc = __dirname + '/media/' + filename;
-            media.push(filename);
+            
             // toCompress.push(loc);
             toCompress.push(new Promise((resolve, reject) => {
               value.mv(loc, function(err) {
@@ -1758,11 +1758,15 @@ MongoClient.connect(url, {
                     ]
                   }).then(files => {
                       console.log('compress done');
-                      console.log(files);
+                      media.push(files[0].path.split('/')[files[0].path.split('/').length - 1]);
                       resolve('resolve');
                   }).catch(err => {
                     console.log('compress failed');
                     return reject('reject');
+                  }).then( () => {
+                    fs.unlink(loc, ()=> {
+                        console.log('file delete async done');
+                    });
                   });
                 }
               });
