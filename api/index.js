@@ -7,6 +7,9 @@ const nodemailer = require('nodemailer');
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0;
 const admin = require('firebase-admin');
 const serviceAccount = require('./admincred.json');
+const imagemin = require('imagemin');
+const imageminPngquant = require('imagemin-pngquant');
+const imageminMozjpeg = require('imagemin-mozjpeg'); 
 
 const smtpTransport = nodemailer.createTransport({
     host: 'mail.mycampusdock.com',
@@ -780,7 +783,6 @@ MongoClient.connect(url, {
 
     });
     router.post('/events/create-event', (req, res) => {
-        console.log(req.body);
         var token = req.headers['x-access-token'];
         if (!token) return res.sendStatus(401);
         jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
@@ -1738,18 +1740,46 @@ MongoClient.connect(url, {
     function saveFiles(files, callback) {
         var media = [];
         let err = false;
+        let toCompress = [];
         Object.entries(files).forEach(([key, value]) => {
             var filename = random() + '-' + value.name;
             var loc = __dirname + '/media/' + filename;
             media.push(filename);
-            value.mv(loc, function(err) {
-                if (err) err = true;
-            });
+            // toCompress.push(loc);
+            toCompress.push(new Promise((resolve, reject) => {
+              value.mv(loc, function(err) {
+                if (err) {
+                  console.log('saving failed for ', filename);
+                  return reject('reject');
+                } else {
+                  console.log('file saved');
+                  imagemin([loc], __dirname + '/media/', {
+                    plugins: [
+                        imageminMozjpeg( {
+                          quality: 40
+                        } ),
+                        imageminPngquant({quality: '40'})
+                    ]
+                  }).then(files => {
+                      console.log('compress done');
+                      console.log(files);
+                      resolve('resolve');
+                  }).catch(err => {
+                    console.log('compress failed');
+                    return reject('reject');
+                  });
+                }
+              });
+            }));
         });
-        if (err)
-            callback(null, err);
-        else
-            callback(media, null);
+        Promise.all(toCompress).then(function() {
+          console.log('all done');
+          callback(media, null);
+        }, function() {
+          console.log(err);
+          return callback(null, true);
+        });
+
     }
 
     function UID(length) {
