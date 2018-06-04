@@ -70,7 +70,7 @@ MongoClient.connect(url, {
       let id = req.body.id;
       let payload = req.body.payload;
       let email = decoded.email;
-      let name = decoded.name;
+      let name = decoded.username;
       let college = decoded.college;
       let timestamp = new Date();
       let params = {
