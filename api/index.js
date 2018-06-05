@@ -880,6 +880,7 @@ MongoClient.connect(url, {
         event_audience,
         audience_processed: event_audience.split(','),
         event_reach: [],
+        event_views: [],
         event_enrollees: []
       };
 
@@ -1254,7 +1255,8 @@ MongoClient.connect(url, {
         bulletin_audience,
         audience_processed: bulletin_audience.split(','),
         creation_time: Date.now(),
-        bulletin_reach: []
+        bulletin_reach: [],
+        bulletin_views: []
       };
 
       saveFiles(req.files ? req.files : [], function(media, err) {
@@ -1541,6 +1543,7 @@ MongoClient.connect(url, {
       });
       var type = req.body.type + '';
       var id = req.body.id;
+      var view = req.body.view;
       var event_id = id;
       let payload = {
         email: decoded.email,
@@ -1550,7 +1553,7 @@ MongoClient.connect(url, {
       switch (type) {
       case '101':
         if (event_id) {
-          updateEventReach(event_id, payload, function(err) {
+          updateEventReach(event_id, payload, view, function(err) {
             if (err) return res.status(200).send({
               error: true,
               message: err
@@ -1570,7 +1573,7 @@ MongoClient.connect(url, {
         var bulletin_id = id;
         console.log('bulletin reach request', bulletin_id);
         if (bulletin_id) {
-          updateBulletinReach(bulletin_id, payload, function(err) {
+          updateBulletinReach(bulletin_id, payload, view, function(err) {
             if (err) return res.status(200).send({
               error: true,
               message: err
@@ -1615,13 +1618,21 @@ MongoClient.connect(url, {
     });
   });
 
-  function updateEventReach(event_id, payload, callback) {
+  function updateEventReach(event_id, payload, view, callback) {
+    let params = {};
+    if (view === undefined){
+      params = {
+        event_reach: payload
+      };
+    } else {
+      params = {
+        event_views: payload
+      };
+    }
     dbo.collection(TABLE_EVENTS).updateOne({
       event_id: event_id
     }, {
-      $addToSet: {
-        event_reach: payload
-      }
+      $addToSet: params
     }, function(err, data) {
       if (err) {
         callback(err);
@@ -1631,13 +1642,21 @@ MongoClient.connect(url, {
     });
   }
 
-  function updateBulletinReach(bulletin_id, payload, callback) {
+  function updateBulletinReach(bulletin_id, payload, view, callback) {
+    let params = {};
+    if (view === undefined){
+      params = {
+        bulletin_reach: payload
+      };
+    } else {
+      params = {
+        bulletin_views: payload
+      };
+    }
     dbo.collection(TABLE_BULLETINS).updateOne({
       bulletin_id: bulletin_id
     }, {
-      $addToSet: {
-        bulletin_reach: payload
-      }
+      $addToSet: params
     }, function(err, data) {
       if (err) {
         callback(err);
