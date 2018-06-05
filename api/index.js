@@ -1133,8 +1133,21 @@ MongoClient.connect(url, {
     }, function(err, data) {
       if (err)
         callback(err);
-      else
-        callback(null);
+      else{
+        dbo.collection(TABLE_USERS).update({
+          email,
+          roll_no
+        }, {
+          $pull: {
+            'enrollments': event_id
+          }
+        }, (error, value) => {
+          if (error)
+            callback(error);
+          else
+            callback(null);
+        });
+      }
     });
   }
 
@@ -1170,23 +1183,23 @@ MongoClient.connect(url, {
     });
   });
 
-  function unenrollEventDB(event_id, roll_no, email, callback) {
-    dbo.collection(TABLE_EVENTS).update({
-      event_id: event_id,
-    }, {
-      $pull: {
-        'event_enrollees': {
-          user_roll: roll_no,
-          user_email: email
-        }
-      }
-    }, function(err, data) {
-      if (err)
-        callback(err);
-      else
-        callback(null);
-    });
-  }
+  // function unenrollEventDB(event_id, roll_no, email, callback) {
+  //   dbo.collection(TABLE_EVENTS).update({
+  //     event_id: event_id,
+  //   }, {
+  //     $pull: {
+  //       'event_enrollees': {
+  //         user_roll: roll_no,
+  //         user_email: email
+  //       }
+  //     }
+  //   }, function(err, data) {
+  //     if (err)
+  //       callback(err);
+  //     else
+  //       callback(null);
+  //   });
+  // }
 
 
   function enrollEventDB(event_id, user, callback) {
