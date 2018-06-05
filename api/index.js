@@ -789,6 +789,64 @@ MongoClient.connect(url, {
     });
   });
 
+  
+
+  router.post('/web/delete-child', (req, res) => {
+    var token = req.headers['x-access-token'];
+    if (!token) return res.json({
+      error: true,
+      mssg: 'invalid token'
+    });
+    console.log(req.body);
+    jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
+      console.log(err);
+      if (err) return res.status(200).json({
+        error: true,
+        mssg: 'invalid token'
+      });
+      dbo.collection(TABLE_USERS_ADMIN).deleteOne({ email: req.body.email }, (err, result) => {
+        console.log(err);
+        if (err) return res.status(200).json({
+          error: true,
+          mssg: 'database error'
+        });
+        // console.log(result);
+        res.status(200).json({
+          error: false,
+          mssg: 'deleted user'
+        });
+      });
+    });
+  });
+
+  router.post('/web/get-child-list', (req, res) => {
+    var token = req.headers['x-access-token'];
+    if (!token) return res.json({
+      error: true,
+      mssg: 'invalid token'
+    });
+    jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
+      console.log(err);
+      if (err) return res.status(200).json({
+        error: true,
+        mssg: 'invalid token'
+      });
+      dbo.collection(TABLE_USERS_ADMIN).find({ parent_email: req.body.email })
+        .project( { email: 1, events: 1, bulletins: 1, notifications: 1 } )
+        .toArray((err, data) => {
+          if (err) return res.status(200).json({
+            error: true,
+            mssg: 'error with the database'
+          });
+          res.status(200).json({
+            error: false,
+            data
+          });
+        });
+
+    });
+  });
+
   router.post('/web/create-child', (req, res) => {
     var token = req.headers['x-access-token'];
     if (!token) return res.json({
@@ -803,6 +861,7 @@ MongoClient.connect(url, {
       let email = req.body.email;
       let password = req.body.password;
       let audience = req.body.audience;
+      let parent_email = req.body.parent_email;
 
       let events = req.body.events;
       let bulletins = req.body.bulletins;
@@ -829,6 +888,7 @@ MongoClient.connect(url, {
         hashsum: '-1',
         bulletins: [],
         events: [],
+        parent_email,
         notifications: [],
         scope: parentScope.split(','), 
         child: true, 
