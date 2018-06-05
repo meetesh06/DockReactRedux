@@ -1198,9 +1198,22 @@ MongoClient.connect(url, {
       }
     }, function(err, data) {
       if (err) {
-        callback(err);
+        return callback(err);
       } else {
-        callback(null);
+        dbo.collection(TABLE_USERS).updateOne({
+          email: user.user_email,
+          roll_no: user.user_roll
+        }, {
+          $addToSet: {
+            enrollments: event_id
+          }
+        }, (error, value) => {
+          if (error) {
+            return callback(error);
+          } else {
+            callback(null);
+          }
+        }); 
       }
     });
   }
@@ -1502,6 +1515,7 @@ MongoClient.connect(url, {
 
 
   router.post('/android/reach', (req, res) => {
+    console.log(req.body);
     var token = req.headers['x-access-token'];
     if (!token) return res.status(200).send({
       error: true,
