@@ -56,6 +56,7 @@ MongoClient.connect(url, {
     databaseURL: 'https://mycampusdock-12f5a.firebaseio.com'
   });
 
+
   router.post('/android/feedback', (req, res) => {
     var token = req.headers['x-access-token'];
     if (!token) return res.json({
@@ -721,13 +722,50 @@ MongoClient.connect(url, {
               APP_SECRET_KEY, {
                 expiresIn: '4d'
               });
+              
+              let limited = [];
+              let parent = data.parent;
+              let i;
+              let j;
+              try {
+                for(i=0;i<data.scope.length;i++) {
+                  let path = data.scope[i].split('-');
+                  let current = dataH.data_raw[parseInt(path[0])];
+                  for(j=1;j<path.length;j++) {
+                    current = current.children[path[j]];
+                  }
+                  limited.push(current);
+                }
+              } catch(e) {
+                return res.sendStatus(405);
+              }
+              let limited_processed = [];
+              let audience = data.audience;
+              if(audience !== undefined) {
+                try {
+                  for(i=0;i<audience.length;i++) {
+                    let path = audience[i].split('-');
+                    let current = limited[parseInt(path[0])];
+                    for(j=1;j<path.length;j++) {
+                      current = current.children[path[j]];
+                    }
+                    limited_processed.push(current);
+                  }
+                } catch(e) {
+                  return res.sendStatus(405);
+                }
+              }
+
               let toSend = {
                 hashsum: data.hashsum ? data.hashsum : '-1',
                 bundle: {
                   events: data.events ? data.events : [],
                   bulletins: data.bulletins ? data.bulletins : [],
                   notifications: data.notifications ? data.notifications : [],
-                  hierarchy: dataH.data_raw
+                  hierarchy: audience === undefined ? limited : limited_processed,
+                  limits: data.limits,
+                  scope: data.scope,
+                  parent: parent !== undefined ? parent : ''
                 }
               };
               return res.status(200).json({
@@ -750,6 +788,67 @@ MongoClient.connect(url, {
         });
     });
   });
+
+  router.post('/web/create-child', (req, res) => {
+    var token = req.headers['x-access-token'];
+    if (!token) return res.json({
+      error: true,
+      mssg: 'invalid token'
+    });
+    jwt.verify(token, APP_SECRET_KEY, function(err, decoded) {
+      if (err) return res.status(200).json({
+        error: true,
+        mssg: 'invalid token'
+      });
+      let email = req.body.email;
+      let password = req.body.password;
+      let audience = req.body.audience;
+
+      let events = req.body.events;
+      let bulletins = req.body.bulletins;
+      let notifications = req.body.notifications;
+
+      let parentScope = req.body.parent;
+      if( email === undefined || password === undefined || audience === undefined || parentScope === undefined  ){ 
+        return res.status(200).json({
+          error: true,
+          mssg: 'invalid details provided'
+        });
+      }
+      let roles = [];
+      if (events === 'yes') roles.push('101');
+      if (bulletins === 'yes') roles.push('102');
+      if (notifications === 'yes') roles.push('103');
+      console.log(roles);
+      let params = {
+        email, 
+        password: passwordHash.generate(password), 
+        audience: audience.split(','), 
+        name: decoded.name,
+        college: decoded.college,
+        hashsum: '-1',
+        bulletins: [],
+        events: [],
+        notifications: [],
+        scope: parentScope.split(','), 
+        child: true, 
+        limits: roles 
+      };
+
+      dbo.collection(TABLE_USERS_ADMIN).insertOne(params, (error, value) => {
+        if (error) return res.status(200).json({
+          error: true,
+          mssg: 'invalid email address'
+        });
+        // console.log(error, value);
+        res.status(200).json({
+          error: false
+        });
+      });
+
+    });
+  });
+
 
   router.post('/verify-chat', (req, res) => {
     var token = req.headers['x-access-token'];
@@ -796,15 +895,52 @@ MongoClient.connect(url, {
               APP_SECRET_KEY, {
                 expiresIn: '4d'
               });
+              let limited = [];
+              let parent = data.parent;
+              let i;
+              let j;
+              try {
+                for(i=0;i<data.scope.length;i++) {
+                  let path = data.scope[i].split('-');
+                  let current = dataH.data_raw[parseInt(path[0])];
+                  for(j=1;j<path.length;j++) {
+                    current = current.children[path[j]];
+                  }
+                  limited.push(current);
+                }
+              } catch(e) {
+                return res.sendStatus(405);
+              }
+              let limited_processed = [];
+              let audience = data.audience;
+              if(audience !== undefined) {
+                try {
+                  for(i=0;i<audience.length;i++) {
+                    let path = audience[i].split('-');
+                    let current = limited[parseInt(path[0])];
+                    for(j=1;j<path.length;j++) {
+                      current = current.children[path[j]];
+                    }
+                    limited_processed.push(current);
+                  }
+                } catch(e) {
+                  return res.sendStatus(405);
+                }
+              }
+
               let toSend = {
                 hashsum: data.hashsum ? data.hashsum : '-1',
                 bundle: {
                   events: data.events ? data.events : [],
                   bulletins: data.bulletins ? data.bulletins : [],
                   notifications: data.notifications ? data.notifications : [],
-                  hierarchy: dataH.data_raw
+                  hierarchy: audience === undefined ? limited : limited_processed,
+                  limits: data.limits,
+                  scope: data.scope,
+                  parent: parent !== undefined ? parent : ''
                 }
               };
+              
               return res.status(200).json({
                 error: false,
                 token: JWTToken,
