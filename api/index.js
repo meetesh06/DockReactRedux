@@ -1034,7 +1034,7 @@ MongoClient.connect(url, {
       let creator_name = decoded.name;
       let creator_email = decoded.email;
       let belongs_to = decoded.college;
-      let event_id = creator_name + '-' + UID(6);
+      let event_id = creator_name.replace(/ /g,'') + '-' + UID(6); //remove spaces then add
       let event_title = req.body.name;
       let event_description = req.body.description;
       let event_start = new Date(req.body.start);
@@ -1698,7 +1698,7 @@ MongoClient.connect(url, {
           return res.status(200).send({
             error: false,
             data: true,
-            reach: result.reach
+            reach: result.reach.length
           });
         } else {
           return res.status(200).send({
