@@ -153,6 +153,10 @@ MongoClient.connect(url, {
 
   });
 
+  router.post('/android/trade-token', (req, res) => {
+      //handle expired token here
+  });
+
   router.post('/android/get-data-for-scope-list', (req, res) => {
     var token = req.headers['x-access-token'];
     if (!token) return res.status(200).send({
@@ -1615,7 +1619,7 @@ MongoClient.connect(url, {
         } else {
           const JWTToken = jwt.sign({
             email,
-            username,
+            name,
             roll_no,
             college,
             scope
