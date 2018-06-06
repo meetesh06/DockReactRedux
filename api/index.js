@@ -1693,13 +1693,14 @@ MongoClient.connect(url, {
           error: true,
           message: err
         });
-        console.log(result);
+
         if (result) {
           console.log(JSON.stringify(result));
           return res.status(200).send({
             error: false,
             data: true,
-            reach: result.reach.length
+            reach: result.event_reach.length,
+            people: result.event_enrollees.length
           });
         } else {
           return res.status(200).send({
