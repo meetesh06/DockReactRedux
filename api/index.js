@@ -1695,10 +1695,11 @@ MongoClient.connect(url, {
         });
         console.log(result);
         if (result) {
+          console.log(JSON.stringify(result));
           return res.status(200).send({
             error: false,
             data: true,
-            reach: result.reach.length
+            reach: result.reach
           });
         } else {
           return res.status(200).send({
