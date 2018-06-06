@@ -1699,7 +1699,7 @@ MongoClient.connect(url, {
           return res.status(200).send({
             error: false,
             data: true,
-            reach: result.reach
+            reach: result.reach.length
           });
         } else {
           return res.status(200).send({
