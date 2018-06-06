@@ -1619,7 +1619,7 @@ MongoClient.connect(url, {
         } else {
           const JWTToken = jwt.sign({
             email,
-            name,
+            name : username,
             roll_no,
             college,
             scope
